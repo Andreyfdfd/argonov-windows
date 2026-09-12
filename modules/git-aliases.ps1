@@ -1,5 +1,14 @@
 # ARGONOV SHELL · git aliases
 
+# Снимаем встроенные алиасы PowerShell, которые мешают
+Remove-Item Alias:gl -Force -ErrorAction SilentlyContinue
+Remove-Item Alias:gc -Force -ErrorAction SilentlyContinue
+Remove-Item Alias:gp -Force -ErrorAction SilentlyContinue
+Remove-Item Alias:gs -Force -ErrorAction SilentlyContinue
+Remove-Item Alias:gb -Force -ErrorAction SilentlyContinue
+Remove-Item Alias:gd -Force -ErrorAction SilentlyContinue
+Remove-Item Alias:gci -Force -ErrorAction SilentlyContinue
+
 function gs   { git status @args }
 function ga   { git add @args }
 function gc   { git commit -m @args }
