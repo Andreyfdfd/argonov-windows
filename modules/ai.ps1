@@ -1,4 +1,4 @@
-# ARGONOV SHELL · ai (LM Studio + agent)
+﻿# ARGONOV SHELL · ai (LM Studio + agent)
 
 $script:AI_URL = "http://localhost:1234/v1"
 $script:AI_MODEL = "deepseek/deepseek-r1-0528-qwen3-8b"

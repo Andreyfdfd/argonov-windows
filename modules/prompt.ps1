@@ -1,4 +1,4 @@
-# ARGONOV SHELL · custom prompt
+﻿# ARGONOV SHELL · custom prompt
 
 function prompt {
     # Сохраняем статус последней команды в самом начале,

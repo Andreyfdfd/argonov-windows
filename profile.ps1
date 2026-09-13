@@ -1,4 +1,4 @@
-# ARGONOV SHELL profile
+﻿# ARGONOV SHELL profile
 $PSVersionTable.PSVersion.ToString()
 
 if (Get-Command py -ErrorAction SilentlyContinue) {

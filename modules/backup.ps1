@@ -1,4 +1,4 @@
-# ARGONOV SHELL · backup
+﻿# ARGONOV SHELL · backup
 
 $script:BACKUP_DIR = "$HOME\ARGONOV-Backups"
 

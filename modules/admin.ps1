@@ -1,4 +1,4 @@
-# ARGONOV SHELL · admin utilities
+﻿# ARGONOV SHELL · admin utilities
 
 function env {
     param([string]$Filter = "")

@@ -1,4 +1,4 @@
-# ARGONOV SHELL · navigation & aliases
+﻿# ARGONOV SHELL · navigation & aliases
 
 # ─── Переходы вверх ───
 function ..    { Set-Location .. }

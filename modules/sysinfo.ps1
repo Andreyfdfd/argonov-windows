@@ -1,4 +1,4 @@
-# ARGONOV SHELL · sysinfo
+﻿# ARGONOV SHELL · sysinfo
 function sysinfo {
     $os  = Get-CimInstance Win32_OperatingSystem
     $cpu = Get-CimInstance Win32_Processor | Select-Object -First 1

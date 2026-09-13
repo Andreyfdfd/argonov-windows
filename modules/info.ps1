@@ -1,4 +1,4 @@
-# ARGONOV SHELL · info command
+﻿# ARGONOV SHELL · info command
 
 function info {
     Write-Host ""

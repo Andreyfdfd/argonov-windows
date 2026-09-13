@@ -1,4 +1,4 @@
-# ARGONOV SHELL · git aliases
+﻿# ARGONOV SHELL · git aliases
 
 # Снимаем встроенные алиасы PowerShell, которые мешают
 Remove-Item Alias:gl -Force -ErrorAction SilentlyContinue

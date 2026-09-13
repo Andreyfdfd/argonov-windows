@@ -1,4 +1,4 @@
-# ARGONOV SHELL · LM Studio CLI
+﻿# ARGONOV SHELL · LM Studio CLI
 
 $script:LMS = "$HOME\.lmstudio\bin\lms.exe"
 $script:DEFAULT_MODEL = "deepseek-r1-0528-qwen3-8b"

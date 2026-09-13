@@ -1,4 +1,4 @@
-# ARGONOV SHELL · network
+﻿# ARGONOV SHELL · network
 
 function myip {
     try {
