@@ -15,6 +15,10 @@ $script:ARGONOV_CATALOG = @(
     )},
     @{ Group='СИСТЕМА'; Items=@(
         @('sysinfo',              'информация о ПК', 'system info'),
+        @('dash (d)',             'полный дашборд', 'full dashboard'),
+        @('autostart',            'аудит автозагрузки', 'startup audit'),
+        @('autostart -All',       'все записи автозагрузки', 'all startup items'),
+        @('autostart-remove NAME','удалить из автозагрузки', 'remove from startup'),
         @('top',                  'топ процессов по RAM', 'top by RAM'),
         @('psg NAME',             'процессы по имени', 'processes by name'),
         @('pskill NAME',          'убить процесс', 'kill process'),
@@ -61,10 +65,11 @@ $script:ARGONOV_CATALOG = @(
         @('hack',                 'справка OSINT', 'OSINT help')
     )},
     @{ Group='AI'; Items=@(
-        @('ai Q',                 'задать вопрос модели', 'ask AI'),
-        @('ai -Chat',             'интерактивный чат', 'interactive chat'),
+        @('ai',                   'открыть чат (Esc/q — выход)', 'open chat'),
+        @('ai <вопрос>',          'один вопрос + выгрузка', 'one-shot ask'),
         @('ai -Model NAME',       'выбрать модель', 'select model'),
         @('ai -Reset',            'очистить историю', 'clear history'),
+        @('ai -Unload',           'выгрузить модель вручную', 'unload model'),
         @('ai -Yolo',             'без подтверждений', 'no confirmations'),
         @('ai -Dry',              'режим предпросмотра', 'dry-run mode'),
         @('ai -List',             'список моделей', 'list models')
