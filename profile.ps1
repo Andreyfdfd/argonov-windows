@@ -23,3 +23,8 @@ if (Test-Path $ArgRoot) {
 if (Get-Command Show-ArgonovCommands -ErrorAction SilentlyContinue) {
     Show-ArgonovCommands
 }
+
+# Проверка безопасности при старте (тихо, только критические угрозы)
+if (Get-Command security-quick -ErrorAction SilentlyContinue) {
+    security-quick -Silent
+}

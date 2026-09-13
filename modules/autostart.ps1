@@ -1,6 +1,6 @@
 ﻿# ARGONOV SHELL · autostart audit
 
-# Известные безопасные записи (низкий риск)
+# Известные безопасные записи
 $script:SAFE_NAMES = @(
     "SecurityHealth","RtkAudUService","OneDrive","Discord","Steam",
     "MicrosoftEdgeAutoLaunch","Adobe","NVIDIA","Radeon","Realtek",
@@ -9,15 +9,26 @@ $script:SAFE_NAMES = @(
     "Sunlogin","AnyDesk","TeamViewer","Dropbox","GoogleDrive","Yandex",
     "Opera","Chrome","Firefox","YandexBrowser","SynologyDrive",
     "Microsoft.Lists","SEVPNCLIENT","SoftEther","Radmin VPN","Happ",
-    "VpnGate","CodeMeter","Sentinel","Poly"
+    "VpnGate","CodeMeter","Sentinel","Poly","Wispr"
 )
 
-# Подозрительные ключевые слова
-$script:SUSPICIOUS_PATTERNS = @(
-    "temp\","\\temp\\","\\appdata\\local\\temp",
-    "startup.*\.exe$","\.vbs$","\.js$","\.wsf$","\.hta$",
-    "powershell.*-enc","cmd.*\/c.*hidden","rundll32",
-    "regsvr32.*http","mshta","wscript","cscript"
+# Подозрительные ПОДСТРОКИ (литеральные, регистронезависимые)
+$script:SUSPICIOUS_STRINGS = @(
+    "\appdata\local\temp\",
+    "\windows\temp\",
+    "\temp\",
+    ".vbs",
+    ".js",
+    ".wsf",
+    ".hta"
+)
+
+# Подозрительные REGEX-паттерны
+$script:SUSPICIOUS_REGEX = @(
+    "powershell.*-enc",
+    "cmd.*\/c.*hidden",
+    "regsvr32.*http",
+    "rundll32.*http"
 )
 
 function autostart {
@@ -74,33 +85,42 @@ function autostart {
     }
 
     # ── Классификация ──
-    $safe      = @()
+    $safe       = @()
     $suspicious = @()
-    $useless   = @()
-    $unknown   = @()
+    $useless    = @()
+    $unknown    = @()
 
     foreach ($item in $items) {
         $valueLower = $item.Value.ToLower()
-        $nameLower = $item.Name.ToLower()
+        $nameLower  = $item.Name.ToLower()
         $isSafe = $false
         $isSuspicious = $false
         $isUseless = $false
 
         foreach ($s in $script:SAFE_NAMES) {
-            if ($nameLower -match [regex]::Escape($s.ToLower()) -or $valueLower -match [regex]::Escape($s.ToLower())) {
+            $sl = $s.ToLower()
+            if ($nameLower -like "*$sl*" -or $valueLower -like "*$sl*") {
                 $isSafe = $true
                 break
             }
         }
 
-        foreach ($p in $script:SUSPICIOUS_PATTERNS) {
-            if ($valueLower -match $p) {
+        foreach ($p in $script:SUSPICIOUS_STRINGS) {
+            if ($valueLower.Contains($p)) {
                 $isSuspicious = $true
                 break
             }
         }
 
-        # Бесполезные — обновляторы, апдейтеры
+        if (-not $isSuspicious) {
+            foreach ($p in $script:SUSPICIOUS_REGEX) {
+                if ($valueLower -match $p) {
+                    $isSuspicious = $true
+                    break
+                }
+            }
+        }
+
         if ($nameLower -match "update|updater|helper|assistant|launcher") {
             $isUseless = $true
         }
@@ -115,10 +135,10 @@ function autostart {
         }
 
         switch ($risk) {
-            "HIGH" { $suspicious += $classified }
-            "LOW"  { $useless   += $classified }
-            "OK"   { $safe      += $classified }
-            default { $unknown  += $classified }
+            "HIGH"  { $suspicious += $classified }
+            "LOW"   { $useless    += $classified }
+            "OK"    { $safe       += $classified }
+            default { $unknown    += $classified }
         }
     }
 
