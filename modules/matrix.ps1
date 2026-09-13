@@ -1,29 +1,30 @@
-﻿# ARGONOV SHELL · matrix rain v2
+﻿# ARGONOV SHELL · matrix rain v3 (safe)
 
-# Огромный набор символов: катакана, кириллица, греческий, латиница,
-# цифры, математика, символы, стрелки, боксовые
-$script:MATRIX_CHARS = (
-    # Halfwidth katakana (японский, 1 клетка)
-    'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ' +
-    # Кириллица
-    'АБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдежзийклмнопрстуфхцчшщъыьэюя' +
-    # Греческий
-    'αβγδεζηθικλμνξοπρστυφχψωΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩ' +
-    # Латиница + цифры
+# ─── Базовый набор (работает с любым шрифтом) ───
+# Латиница + цифры + кириллица + греческий + стрелки + рамки + символы
+$script:MATRIX_CHARS_SAFE = (
     'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789' +
-    # Математика
-    '∑∫√∞∂π∆Ω∇≈≠±×÷∅∈∉∋∌∝∟∠∡∢' +
-    # Символы
-    '★☆♠♣♥♦◆◇○●□■△▽▲▼◄►' +
-    # Стрелки и рамки
-    '↑↓←→↔↕↖↗↘↙┃━┏┓┗┛┣┫┳┻╋'
+    'АБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдежзийклмнопрстуфхцчшщъыьэюя' +
+    'αβγδεζηθικλμνξοπρστυφχψωΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩ' +
+    '∑∫√∞∂π∆Ω∇≈≠±×÷' +
+    '↑↓←→↔↕↖↗↘↙┃━┏┓┗┛┣┫┳┻╋' +
+    '★☆♠♣♥♦◆◇○●□■△▽▲▼◄►'
+).ToCharArray()
+
+# ─── Расширенный набор (для Sarasa Mono / других CJK-шрифтов) ───
+$script:MATRIX_CHARS_WIDE = $script:MATRIX_CHARS_SAFE + (
+    'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ' +
+    '一二三四五六七八九十百千万円年月日火水木金土曜上下左右前後東西南北' +
+    '世界時間人間天地光明闇影風雨雪雷電' +
+    '∅∈∉∋∌∝∟∠∡∢'
 ).ToCharArray()
 
 function matrix {
     param(
         [int]$Fps = 30,
         [int]$MinTail = 8,
-        [int]$MaxTail = 30
+        [int]$MaxTail = 30,
+        [switch]$Wide
     )
 
     $esc = [char]27
@@ -35,26 +36,27 @@ function matrix {
         return
     }
 
-    $chars = $script:MATRIX_CHARS
+    if ($Wide) {
+        $chars = $script:MATRIX_CHARS_WIDE
+    } else {
+        $chars = $script:MATRIX_CHARS_SAFE
+    }
     $charLen = $chars.Length
 
-    # Функция создания новой капли с рандомными параметрами
     function New-Drop {
         @{
             Y           = (Get-Random -Minimum (-$rows * 2) -Maximum 0)
-            Speed       = (Get-Random -Minimum 5 -Maximum 70) / 10.0   # 0.5 .. 7.0
+            Speed       = (Get-Random -Minimum 5 -Maximum 70) / 10.0
             TailLen     = (Get-Random -Minimum $MinTail -Maximum ($MaxTail + 1))
-            FlashChance = (Get-Random -Minimum 0 -Maximum 80) / 1000.0 # 0 .. 0.08
+            FlashChance = (Get-Random -Minimum 0 -Maximum 80) / 1000.0
         }
     }
 
-    # Инициализация капель
     $drops = @()
     for ($i = 0; $i -lt $cols; $i++) {
         $drops += New-Drop
     }
 
-    # Скрыть курсор, очистить экран
     Write-Host "$esc[?25l$esc[2J" -NoNewline
 
     $delay = [int](1000 / $Fps)
@@ -62,13 +64,11 @@ function matrix {
 
     try {
         while ($true) {
-            # Выход: Esc или Q
             if ([Console]::KeyAvailable) {
                 $k = [Console]::ReadKey($true)
                 if ($k.Key -eq 'Escape' -or $k.Key -eq 'Q') { break }
             }
 
-            # Изменение размера окна
             $newCols = [Console]::WindowWidth
             $newRows = [Console]::WindowHeight
             if ($newCols -ne $cols -or $newRows -ne $rows) {
@@ -81,23 +81,18 @@ function matrix {
                 Write-Host "$esc[2J" -NoNewline
             }
 
-            # Большой буфер, чтобы меньше обращений к консоли
             $sb = [System.Text.StringBuilder]::new(131072)
 
-            # Основной рендер — по колонкам
             for ($x = 0; $x -lt $cols; $x++) {
                 $d = $drops[$x]
                 $y = [int]$d.Y
                 $tail = [int]$d.TailLen
 
-                # Хвост капли
                 for ($t = 0; $t -lt $tail; $t++) {
                     $cy = $y - $t
                     if ($cy -lt 0 -or $cy -ge $rows) { continue }
 
-                    # Градиент цвета
                     if ($t -eq 0) {
-                        # Голова — либо вспышка белым, либо яркая
                         if ((Get-Random -Maximum 1000) / 1000.0 -lt $d.FlashChance) {
                             $color = "$esc[38;2;255;255;255m"
                         } else {
@@ -121,30 +116,26 @@ function matrix {
                     [void]$sb.Append("$esc[$($cy + 1);$($x + 1)H$color$ch")
                 }
 
-                # Стираем ячейку за хвостом
                 $ey = $y - $tail
                 if ($ey -ge 0 -and $ey -lt $rows) {
                     [void]$sb.Append("$esc[$($ey + 1);$($x + 1)H ")
                 }
 
-                # Двигаем каплю вниз
                 $d.Y = $d.Y + $d.Speed
                 if ($d.Y - $tail -gt $rows) {
                     $drops[$x] = New-Drop
                 }
             }
 
-            # Взрывы — случайные вспышки белым по экрану
+            # Взрывы
             $burstCount = Get-Random -Minimum 0 -Maximum 4
             for ($b = 0; $b -lt $burstCount; $b++) {
                 $bx = Get-Random -Minimum 0 -Maximum $cols
                 $by = Get-Random -Minimum 0 -Maximum $rows
 
-                # Центр вспышки — белый
                 $ch = $chars[(Get-Random -Maximum $charLen)]
                 [void]$sb.Append("$esc[$($by + 1);$($bx + 1)H$esc[38;2;255;255;255m$ch")
 
-                # Соседние ячейки — светло-зелёные
                 $offsets = @(@(1,0),@(-1,0),@(0,1),@(0,-1))
                 foreach ($o in $offsets) {
                     $nx = $bx + $o[0]
@@ -161,7 +152,6 @@ function matrix {
             Start-Sleep -Milliseconds $delay
         }
     } finally {
-        # Восстановить курсор, сбросить цвет, очистить
         Write-Host "$esc[?25h$esc[0m$esc[2J$esc[H" -NoNewline
         Write-Host ""
     }
@@ -179,5 +169,8 @@ function matrix-long {
     matrix -Fps 30 -MinTail 30 -MaxTail 60
 }
 
-# Алиас — кириллическая "м"
+function matrix-wide {
+    matrix -Wide
+}
+
 Set-Alias -Name "м" -Value "matrix" -Force
