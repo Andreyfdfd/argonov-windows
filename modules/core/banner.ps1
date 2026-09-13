@@ -18,18 +18,24 @@ function Show-ArgonovBanner {
     $now = Get-Date
     $psVer = $PSVersionTable.PSVersion.ToString()
     $pyVer = try { (& py -3.14 --version 2>&1) -replace "Python ","" } catch { "?" }
+    $timeStr = $now.ToString("HH:mm:ss")
 
-    # Верхняя рамка
+    # Внутренняя ширина рамки — 54 знака
+    $innerWidth = 54
+    $title = "ARGONOV OS"
+    $padding = $innerWidth - 2 - $title.Length - $timeStr.Length - 2
+    if ($padding -lt 1) { $padding = 1 }
+
+    $topLine    = "  +" + ("=" * $innerWidth) + "+"
+    $titleLine  = "  |  " + $title + (" " * $padding) + $timeStr + "  |"
+    $botLine    = "  +" + ("=" * $innerWidth) + "+"
+
     Write-Host ""
-    Write-Host "  +======================================================+" -ForegroundColor DarkCyan
-    Write-Host "  |  " -NoNewline -ForegroundColor DarkCyan
-    Write-Host "ARGONOV OS" -NoNewline -ForegroundColor Cyan
-    Write-Host (" " * (46 - "ARGONOV OS".Length)) -NoNewline
-    Write-Host "$($now.ToString('HH:mm:ss'))" -NoNewline -ForegroundColor Gray
-    Write-Host "  |" -ForegroundColor DarkCyan
-    Write-Host "  +======================================================+" -ForegroundColor DarkCyan
+    Write-Host $topLine   -ForegroundColor DarkCyan
+    Write-Host $titleLine -ForegroundColor Cyan
+    Write-Host $botLine   -ForegroundColor DarkCyan
 
-    # Инфо
+    # Инфо-строка
     Write-Host "     " -NoNewline
     Write-Host "PowerShell " -NoNewline -ForegroundColor DarkGray
     Write-Host "$psVer" -NoNewline -ForegroundColor Cyan
