@@ -1,4 +1,4 @@
-﻿# ARGONOV SHELL · ai (LM Studio + agent)
+﻿# ARGONOV SHELL · ai (LM Studio + agent v2)
 
 $script:AI_URL = "http://localhost:1234/v1"
 $script:AI_MODEL = "deepseek/deepseek-r1-0528-qwen3-8b"
@@ -30,7 +30,6 @@ $script:AI_DANGER = @(
 )
 
 # ═══ SYSTEM PROMPT ═══
-# Одиночные кавычки — никакой интерполяции, никаких проблем с backtick
 
 function ai-system-prompt {
     $lines = @(
@@ -39,11 +38,11 @@ function ai-system-prompt {
         '',
         'ТЫ УМЕЕШЬ ВЫПОЛНЯТЬ ДЕЙСТВИЯ. Для этого используй специальные блоки:',
         '',
-        'СОЗДАТЬ ИЛИ ИЗМЕНИТЬ ФАЙЛ — блок write:',
+        'СОЗДАТЬ/ИЗМЕНИТЬ ФАЙЛ — блок write:',
         '',
         '```write',
         'C:\ARGONOV\hello.ps1',
-        'Write-Host "привет, мир"',
+        'Write-Host "привет"',
         '```',
         '',
         'ПРОЧИТАТЬ ФАЙЛ — блок read:',
@@ -58,29 +57,52 @@ function ai-system-prompt {
         'python C:\ARGONOV\sysinfo.py',
         '```',
         '',
+        'СОЗДАТЬ ПАПКУ — блок mkdir:',
+        '',
+        '```mkdir',
+        'C:\ARGONOV\projects\my-new-project',
+        '```',
+        '',
+        'ПОКАЗАТЬ СОДЕРЖИМОЕ ПАПКИ — блок list:',
+        '',
+        '```list',
+        'C:\ARGONOV\modules',
+        '```',
+        '',
+        'УДАЛИТЬ ФАЙЛ ИЛИ ПАПКУ — блок delete:',
+        '',
+        '```delete',
+        'C:\ARGONOV\old-file.txt',
+        '```',
+        '',
         'КРИТИЧЕСКИ ВАЖНО:',
-        '- Когда пользователь просит создать или изменить файл — ВСЕГДА используй блок write.',
+        '- Когда просит создать файл — используй блок write.',
         '- НЕ проси пользователя открыть блокнот или сохранить вручную.',
         '- Когда просит прочитать — используй блок read.',
-        '- Когда просит запустить — используй блок exec.',
-        '- НЕ выдумывай Linux-команды: ls, cat, rm, nano, mkdir.',
-        '- Пути только абсолютные, например: C:\ARGONOV\file.ps1',
+        '- Когда просит создать папку — используй блок mkdir.',
+        '- Когда просит показать содержимое — используй блок list.',
+        '- Когда просит удалить — используй блок delete.',
+        '- НЕ выдумывай Linux-команды: ls, cat, rm, nano, mkdir -p.',
+        '- Пути только абсолютные: C:\ARGONOV\file.ps1',
         '',
-        'Пример правильного ответа на "создай hello.ps1 который печатает привет":',
+        'Пример правильного ответа на "создай проект test":',
         '',
-        'Создаю файл.',
+        'Создаю папку и файл.',
+        '',
+        '```mkdir',
+        'C:\ARGONOV\test',
+        '```',
         '',
         '```write',
-        'C:\ARGONOV\hello.ps1',
-        'Write-Host "привет"',
+        'C:\ARGONOV\test\main.ps1',
+        'Write-Host "hello"',
         '```'
     )
 
     $prompt = $lines -join "`n"
     $sandbox = ($script:AI_SANDBOX | ForEach-Object { "  - $_" }) -join "`n"
-    $prompt += "`n`nРАЗРЕШЁННЫЕ ПАПКИ ДЛЯ ЗАПИСИ:`n$sandbox"
+    $prompt += "`n`nРАЗРЕШЁННЫЕ ПАПКИ (sandbox):`n$sandbox"
     $prompt += "`n`nЗАПРЕЩЕНО: писать в C:\Windows, C:\Program Files, системные папки. Команды rm -rf, format, shutdown, diskpart."
-
     return $prompt
 }
 
@@ -117,16 +139,13 @@ function ai-server-ok {
 
 function ai-ensure-server {
     if (ai-server-ok) { return $true }
-
     if (-not (Test-Path $script:LMS)) {
         Write-Host "  lms.exe not found" -ForegroundColor Red
         return $false
     }
-
     Write-Host "  Starting LM Studio..." -ForegroundColor Yellow
     & $script:LMS server start 2>&1 | Out-Null
     Start-Sleep -Seconds 3
-
     $loaded = $false
     try {
         $r = Invoke-RestMethod -Uri "$script:AI_URL/models" -TimeoutSec 5
@@ -134,20 +153,18 @@ function ai-ensure-server {
             if ($m.id -like "*deepseek-r1-0528*") { $loaded = $true; break }
         }
     } catch {}
-
     if (-not $loaded) {
         Write-Host "  Loading model..." -ForegroundColor Yellow
         & $script:LMS load $script:AI_MODEL --gpu max -y 2>&1 | Out-Null
         Start-Sleep -Seconds 3
     }
-
     return (ai-server-ok)
 }
 
 # ═══ TOOL ФУНКЦИИ ═══
 
 function ai-exec {
-    param([string]$Cmd, [bool]$Auto = $false)
+    param([string]$Cmd)
     Write-Host ""
     if (ai-is-danger $Cmd) {
         Write-Host "  BLOCKED (danger): $Cmd" -ForegroundColor Red
@@ -156,19 +173,17 @@ function ai-exec {
     Write-Host "  [exec] " -NoNewline -ForegroundColor Yellow
     Write-Host $Cmd -ForegroundColor Cyan
 
-    if (-not $Auto -and -not $script:AI_YOLO) {
+    if (-not $script:AI_YOLO) {
         $a = Read-Host "  Run? (y/N)"
         if ($a -ne "y") {
             Write-Host "  Cancelled" -ForegroundColor DarkGray
             return "[cancelled by user]"
         }
     }
-
     if ($script:AI_DRY) {
         Write-Host "  (dry-run)" -ForegroundColor DarkGray
         return "[dry-run]"
     }
-
     try {
         $out = & pwsh -NoProfile -Command $Cmd 2>&1 | Out-String
         Write-Host $out
@@ -181,13 +196,12 @@ function ai-exec {
 }
 
 function ai-write {
-    param([string]$Path, [string]$Content, [bool]$Auto = $false)
+    param([string]$Path, [string]$Content)
     Write-Host ""
     if (-not (ai-is-sandbox $Path)) {
         Write-Host "  BLOCKED (outside sandbox): $Path" -ForegroundColor Red
         return "[BLOCKED: $Path outside sandbox]"
     }
-
     Write-Host "  [write] " -NoNewline -ForegroundColor Yellow
     Write-Host $Path -ForegroundColor Cyan
     Write-Host "  Preview:" -ForegroundColor DarkGray
@@ -199,20 +213,17 @@ function ai-write {
     if ($lines.Count -gt 15) {
         Write-Host "    | ... ($($lines.Count - 15) more)" -ForegroundColor DarkGray
     }
-
-    if (-not $Auto -and -not $script:AI_YOLO) {
+    if (-not $script:AI_YOLO) {
         $a = Read-Host "  Write? (y/N)"
         if ($a -ne "y") {
             Write-Host "  Cancelled" -ForegroundColor DarkGray
             return "[cancelled by user]"
         }
     }
-
     if ($script:AI_DRY) {
         Write-Host "  (dry-run)" -ForegroundColor DarkGray
         return "[dry-run]"
     }
-
     try {
         $dir = Split-Path -Parent $Path
         if ($dir -and -not (Test-Path $dir)) {
@@ -253,34 +264,162 @@ function ai-read {
     }
 }
 
+function ai-mkdir {
+    param([string]$Path)
+    Write-Host ""
+    if (-not (ai-is-sandbox $Path)) {
+        Write-Host "  BLOCKED (outside sandbox): $Path" -ForegroundColor Red
+        return "[BLOCKED: $Path outside sandbox]"
+    }
+    Write-Host "  [mkdir] " -NoNewline -ForegroundColor Yellow
+    Write-Host $Path -ForegroundColor Cyan
+    if (-not $script:AI_YOLO) {
+        $a = Read-Host "  Create? (y/N)"
+        if ($a -ne "y") {
+            Write-Host "  Cancelled" -ForegroundColor DarkGray
+            return "[cancelled by user]"
+        }
+    }
+    if ($script:AI_DRY) {
+        Write-Host "  (dry-run)" -ForegroundColor DarkGray
+        return "[dry-run]"
+    }
+    try {
+        New-Item -ItemType Directory -Force -Path $Path | Out-Null
+        Write-Host "  Created: $Path" -ForegroundColor Green
+        return "[created OK: $Path]"
+    } catch {
+        return "[error] $($_.Exception.Message)"
+    }
+}
+
+function ai-list {
+    param([string]$Path = ".")
+    Write-Host ""
+    if (-not (ai-is-sandbox $Path)) {
+        Write-Host "  BLOCKED (outside sandbox): $Path" -ForegroundColor Red
+        return "[BLOCKED: $Path outside sandbox]"
+    }
+    if (-not (Test-Path $Path)) {
+        Write-Host "  Not found: $Path" -ForegroundColor Red
+        return "[not found: $Path]"
+    }
+    Write-Host "  [list] $Path" -ForegroundColor Cyan
+    try {
+        $items = Get-ChildItem -Path $Path -Force -ErrorAction Stop
+        $out = foreach ($i in $items) {
+            $type = if ($i.PSIsContainer) { "DIR " } else { "FILE" }
+            $size = if ($i.PSIsContainer) { "" } else { " ($([math]::Round($i.Length / 1KB, 1)) KB)" }
+            "$type  $($i.Name)$size"
+        }
+        $text = ($out -join "`n")
+        Write-Host $text -ForegroundColor Gray
+        return $text
+    } catch {
+        return "[error] $($_.Exception.Message)"
+    }
+}
+
+function ai-delete {
+    param([string]$Path)
+    Write-Host ""
+    if (-not (ai-is-sandbox $Path)) {
+        Write-Host "  BLOCKED (outside sandbox): $Path" -ForegroundColor Red
+        return "[BLOCKED: $Path outside sandbox]"
+    }
+    if (-not (Test-Path $Path)) {
+        Write-Host "  Not found: $Path" -ForegroundColor Red
+        return "[not found: $Path]"
+    }
+
+    $item = Get-Item $Path
+    if ($item.PSIsContainer) {
+        $fileCount = (Get-ChildItem $Path -Recurse -File -ErrorAction SilentlyContinue).Count
+        Write-Host "  [delete DIR] " -NoNewline -ForegroundColor Yellow
+        Write-Host "$Path ($fileCount files inside)" -ForegroundColor Cyan
+    } else {
+        Write-Host "  [delete FILE] " -NoNewline -ForegroundColor Yellow
+        Write-Host $Path -ForegroundColor Cyan
+    }
+
+    if (-not $script:AI_YOLO) {
+        $a = Read-Host "  Delete? (y/N)"
+        if ($a -ne "y") {
+            Write-Host "  Cancelled" -ForegroundColor DarkGray
+            return "[cancelled by user]"
+        }
+    }
+    if ($script:AI_DRY) {
+        Write-Host "  (dry-run)" -ForegroundColor DarkGray
+        return "[dry-run]"
+    }
+    try {
+        Remove-Item -Path $Path -Recurse -Force -ErrorAction Stop
+        Write-Host "  Deleted: $Path" -ForegroundColor Green
+        return "[deleted OK: $Path]"
+    } catch {
+        return "[error] $($_.Exception.Message)"
+    }
+}
+
 function ai-handle-response {
     param([string]$Answer)
     $did = $false
     $results = "`n=== TOOL RESULTS ===`n"
 
-    $readMatches = [regex]::Matches($Answer, '(?s)```read\s*\n(.*?)\n```')
-    foreach ($m in $readMatches) {
-        $path = $m.Groups[1].Value.Trim()
-        $r = ai-read -Path $path
-        $results += "`n[READ $path]:`n$r`n"
+    # READ
+    $m = [regex]::Matches($Answer, '(?s)```read\s*\n(.*?)\n```')
+    foreach ($x in $m) {
+        $p = $x.Groups[1].Value.Trim()
+        $r = ai-read -Path $p
+        $results += "`n[READ $p]:`n$r`n"
         $did = $true
     }
 
-    $writeMatches = [regex]::Matches($Answer, '(?s)```write\s*\n(.*?)\n(.*?)\n```')
-    foreach ($m in $writeMatches) {
-        $path = $m.Groups[1].Value.Trim()
-        $content = $m.Groups[2].Value
-        $r = ai-write -Path $path -Content $content
-        $results += "`n[WRITE $path]: $r`n"
+    # WRITE
+    $m = [regex]::Matches($Answer, '(?s)```write\s*\n(.*?)\n(.*?)\n```')
+    foreach ($x in $m) {
+        $p = $x.Groups[1].Value.Trim()
+        $c = $x.Groups[2].Value
+        $r = ai-write -Path $p -Content $c
+        $results += "`n[WRITE $p]: $r`n"
         $did = $true
     }
 
-    $execMatches = [regex]::Matches($Answer, '(?s)```exec\s*\n(.*?)\n```')
-    foreach ($m in $execMatches) {
-        $cmd = $m.Groups[1].Value.Trim()
-        if (-not $cmd) { continue }
-        $r = ai-exec -Cmd $cmd
-        $results += "`n[EXEC '$cmd']:`n$r`n"
+    # MKDIR
+    $m = [regex]::Matches($Answer, '(?s)```mkdir\s*\n(.*?)\n```')
+    foreach ($x in $m) {
+        $p = $x.Groups[1].Value.Trim()
+        $r = ai-mkdir -Path $p
+        $results += "`n[MKDIR $p]: $r`n"
+        $did = $true
+    }
+
+    # LIST
+    $m = [regex]::Matches($Answer, '(?s)```list\s*\n(.*?)\n```')
+    foreach ($x in $m) {
+        $p = $x.Groups[1].Value.Trim()
+        $r = ai-list -Path $p
+        $results += "`n[LIST $p]:`n$r`n"
+        $did = $true
+    }
+
+    # DELETE
+    $m = [regex]::Matches($Answer, '(?s)```delete\s*\n(.*?)\n```')
+    foreach ($x in $m) {
+        $p = $x.Groups[1].Value.Trim()
+        $r = ai-delete -Path $p
+        $results += "`n[DELETE $p]: $r`n"
+        $did = $true
+    }
+
+    # EXEC
+    $m = [regex]::Matches($Answer, '(?s)```exec\s*\n(.*?)\n```')
+    foreach ($x in $m) {
+        $c = $x.Groups[1].Value.Trim()
+        if (-not $c) { continue }
+        $r = ai-exec -Cmd $c
+        $results += "`n[EXEC '$c']:`n$r`n"
         $did = $true
     }
 
@@ -288,9 +427,9 @@ function ai-handle-response {
     return $null
 }
 
-# ═══ ОСНОВНАЯ ФУНКЦИЯ ═══
+# ═══ ОСНОВНОЕ ═══
 
-function ai-list {
+function ai-list-models {
     if (-not (ai-ensure-server)) { return }
     try {
         $r = Invoke-RestMethod -Uri "$script:AI_URL/models" -TimeoutSec 5
@@ -344,7 +483,6 @@ function ai-request {
         temperature = 0.6
         max_tokens = 4096
     } | ConvertTo-Json -Depth 10 -Compress
-
     return Invoke-RestMethod -Uri "$script:AI_URL/chat/completions" `
         -Method Post -Body $body -ContentType "application/json" -TimeoutSec 300
 }
@@ -361,7 +499,7 @@ function ai {
     }
 
     $first = $list[0]
-    if ($first -eq "-List" -or $first -eq "-l")  { ai-list; return }
+    if ($first -eq "-List" -or $first -eq "-l")  { ai-list-models; return }
     if ($first -eq "-Chat" -or $first -eq "-c")  { ai-chat; return }
     if ($first -eq "-Reset" -or $first -eq "-r") { ai-reset; return }
     if ($first -eq "-Yolo" -or $first -eq "-y")  { ai-yolo; return }
@@ -373,7 +511,6 @@ function ai {
 
     $question = ($list -join " ").Trim()
     if (-not $question) { return }
-
     if (-not (ai-ensure-server)) { return }
 
     $messages = @(@{ role = "system"; content = (ai-system-prompt) })
@@ -387,7 +524,6 @@ function ai {
         $t0 = Get-Date
         $r = ai-request -Messages $messages
         $el = [math]::Round(((Get-Date) - $t0).TotalSeconds, 1)
-
         $answer = $r.choices[0].message.content
         $reasoning = $r.choices[0].message.reasoning_content
 
