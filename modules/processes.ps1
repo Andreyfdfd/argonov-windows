@@ -35,6 +35,14 @@ function top {
         Format-Table -AutoSize
 }
 
+function human-size {
+    param([long]$Bytes)
+    if ($Bytes -ge 1GB) { return "$([math]::Round($Bytes / 1GB, 2)) GB" }
+    if ($Bytes -ge 1MB) { return "$([math]::Round($Bytes / 1MB, 2)) MB" }
+    if ($Bytes -ge 1KB) { return "$([math]::Round($Bytes / 1KB, 1)) KB" }
+    return "$Bytes B"
+}
+
 function bigfiles {
     param(
         [string]$Path = ".",
@@ -48,7 +56,7 @@ function bigfiles {
     Get-ChildItem -Path $Path -Recurse -File -ErrorAction SilentlyContinue |
         Sort-Object -Property Length -Descending |
         Select-Object -First $Top `
-            @{N='Size_MB'; E={[math]::Round($_.Length / 1MB, 1)}},
+            @{N='Size'; E={ human-size $_.Length }},
             FullName |
         Format-Table -AutoSize
 }
