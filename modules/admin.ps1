@@ -52,12 +52,9 @@ function startup {
     Write-Host ""
 }
 
-function clean {
+function cleanup {
     param([switch]$Execute)
-    $paths = @(
-        "$env:TEMP",
-        "$env:LOCALAPPDATA\Temp"
-    )
+    $paths = @("$env:TEMP")
     $totalBytes = 0
     foreach ($p in $paths) {
         if (Test-Path $p) {
@@ -76,7 +73,7 @@ function clean {
     Write-Host "  Total: $total" -ForegroundColor Cyan
 
     if (-not $Execute) {
-        Write-Host "  (preview only, run 'clean -Execute' to delete)" -ForegroundColor DarkGray
+        Write-Host "  (preview only, use cleanup -Execute to delete)" -ForegroundColor DarkGray
         return
     }
 
