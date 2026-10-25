@@ -1,4 +1,4 @@
-﻿# ARGONOV SHELL · ai (chat-first + auto unload)
+# ARGONOV SHELL · ai (chat-first + auto unload)
 
 $script:AI_URL = "http://localhost:1234/v1"
 $script:AI_MODEL = "deepseek/deepseek-r1-0528-qwen3-8b"
@@ -46,7 +46,7 @@ function ai-system-prompt {
         '',
         'ЗАПУСТИТЬ КОМАНДУ:',
         '```exec',
-        'python C:\ARGONOV\sysinfo.py',
+        '. ''C:\ARGONOV\modules\system\sysinfo.ps1''; sysinfo',
         '```',
         '',
         'СОЗДАТЬ ПАПКУ:',

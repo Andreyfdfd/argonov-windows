@@ -10,7 +10,7 @@
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?style=flat-square&logo=windows&logoColor=white)
 ![Git](https://img.shields.io/badge/Git-SSH-F05032?style=flat-square&logo=git&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)
-![Commands](https://img.shields.io/badge/Commands-96-brightgreen?style=flat-square)
+![Commands](https://img.shields.io/badge/Commands-108-brightgreen?style=flat-square)
 
 ---
 
@@ -40,7 +40,7 @@
 
 **RU:** ARGONOV SHELL — персональная оболочка для Windows 11, построенная поверх **PowerShell 7**. Превращает стандартный терминал в полноценный инструментарий для разработки, автоматизации, AI-ассистента, OSINT-исследований и инженерных задач. Оболочка загружается автоматически при открытии Windows Terminal.
 
-**Status / Статус:** Personal project, actively developed. 96 commands across 17 modules. / Персональный проект, активно развивается. 96 команд в 17 модулях.
+**Status / Статус:** Personal project, actively developed. 108 command catalog entries across 22 PowerShell module files in 8 module folders. / Персональный проект, активно развивается. 108 записей в каталоге команд, 22 PowerShell-модуля в 8 папках.
 
 ---
 
@@ -119,7 +119,7 @@ Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force
 **RU:** Открой Windows Terminal и попробуй:
 
 ```powershell
-sysinfo           # System information panel / Панель железа
+sysinfo           # Full system health diagnostics / Полная диагностика состояния ПК
 myip              # Your external IP / Внешний IP
 ai привет         # Chat with local AI / Чат с локальной нейросетью
 matrix            # Digital rain / Цифровой дождь
@@ -159,7 +159,14 @@ info              # Help screen / Справка
 
 | Command / Команда | EN | RU |
 |---|---|---|
-| `sysinfo` | Hardware info panel | Панель железа |
+| `sysinfo` | Full system health diagnostics | Полная диагностика состояния ПК |
+| `sysinfo live` | Live CPU/RAM/network/sensor monitoring | Мониторинг нагрузки и датчиков |
+| `sysinfo live -Log` | Live monitoring plus CSV history | Мониторинг с записью истории CSV |
+| `sysinfo deep [-Days N]` | Extended events, device and security analysis | Расширенный анализ событий, устройств и защиты |
+| `sysinfo setup` | Install and hash-verify sensor library | Установить библиотеку датчиков и проверить SHA-256 |
+| `sysinfo export [-Path BASE]` | Export HTML and JSON report | Экспорт отчёта в HTML и JSON |
+| `sysinfo history` | Show recent measurements | Показать последние измерения |
+| `sysinfo help` | Show sysinfo mode help | Справка по режимам sysinfo |
 | `top` | Top 15 processes by RAM | Топ-15 процессов по RAM |
 | `psg NAME` | Processes by name | Процессы по имени |
 | `pskill NAME` | Kill process | Убить процесс |
@@ -172,6 +179,8 @@ info              # Help screen / Справка
 | `cleanup` | Temp size preview | Размер temp |
 | `cleanup -Execute` | Clean temp | Очистка temp |
 | `uptime` | System uptime | Аптайм системы |
+
+Detailed diagnostics, data-source limits and privacy notes: [SYSINFO guide](docs/SYSINFO.md).
 
 ### Network / Сеть
 

@@ -1,4 +1,4 @@
-﻿# ARGONOV SHELL · commands catalog
+# ARGONOV SHELL · commands catalog
 
 $script:ARGONOV_CATALOG = @(
     @{ Group='НАВИГАЦИЯ И ФАЙЛЫ'; Items=@(
@@ -14,7 +14,14 @@ $script:ARGONOV_CATALOG = @(
         @('grep TEXT FILE',       'поиск в файле', 'search in file')
     )},
     @{ Group='СИСТЕМА'; Items=@(
-        @('sysinfo',              'информация о ПК', 'system info'),
+        @('sysinfo',              'полная диагностика ПК', 'full system health diagnostics'),
+        @('sysinfo live',         'мониторинг нагрузки и датчиков', 'live CPU/RAM/network/sensor monitoring'),
+        @('sysinfo live -Log',    'мониторинг с записью истории', 'live monitoring with CSV history'),
+        @('sysinfo deep',         'расширенный анализ ошибок', 'deep event and device analysis'),
+        @('sysinfo setup',        'установка backend датчиков', 'verified sensor backend setup'),
+        @('sysinfo export',       'экспорт HTML + JSON отчёта', 'export HTML + JSON report'),
+        @('sysinfo history',      'история мониторинга', 'recent telemetry history'),
+        @('sysinfo help',         'справка по режимам', 'sysinfo modes help')
         @('dash (d)',             'полный дашборд', 'full dashboard'),
         @('autostart',            'аудит автозагрузки', 'startup audit'),
         @('autostart -All',       'все записи автозагрузки', 'all startup items'),

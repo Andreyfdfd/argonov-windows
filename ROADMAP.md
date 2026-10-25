@@ -10,7 +10,7 @@
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?style=flat-square&logo=windows&logoColor=white)
 ![Git](https://img.shields.io/badge/Git-SSH-F05032?style=flat-square&logo=git&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)
-![Commands](https://img.shields.io/badge/Commands-101-brightgreen?style=flat-square)
+![Commands](https://img.shields.io/badge/Commands-108-brightgreen?style=flat-square)
 
 ---
 
@@ -37,9 +37,9 @@
 
 ## Overview / Обзор
 
-**EN:** ARGONOV SHELL is a personal PowerShell 7 environment for Windows 11. It combines fast commands, git aliases, a local AI agent, OSINT tools, antivirus integration, and a CAD/CAM launcher. The shell auto-loads on every terminal start and provides 101 commands across 8 categories.
+**EN:** ARGONOV SHELL is a personal PowerShell 7 environment for Windows 11. It combines fast commands, git aliases, a local AI agent, OSINT tools, antivirus integration, and a CAD/CAM launcher. The shell auto-loads on every terminal start and provides 108 command catalog entries across 13 command groups and 8 module folders.
 
-**RU:** ARGONOV SHELL — персональная оболочка PowerShell 7 для Windows 11. Объединяет быстрые команды, git-алиасы, локальный AI-агент, OSINT-инструменты, антивирусную интеграцию и CAD/CAM-лончер. Оболочка автоматически загружается при старте терминала и даёт 101 команду в 8 категориях.
+**RU:** ARGONOV SHELL — персональная оболочка PowerShell 7 для Windows 11. Объединяет быстрые команды, git-алиасы, локальный AI-агент, OSINT-инструменты, антивирусную интеграцию и CAD/CAM-лончер. Оболочка автоматически загружается при старте терминала и даёт 108 записей в каталоге команд: 13 групп команд в 8 папках модулей.
 
 **Status / Статус:** Personal project, actively developed.
 
@@ -119,7 +119,7 @@ Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force
 ## Quick Start / Быстрый старт
 
 ```powershell
-sysinfo           # Hardware info / Панель железа
+sysinfo           # Full system diagnostics / Полная диагностика системы
 dash              # Full dashboard / Полный дашборд
 myip              # External IP / Внешний IP
 ai                # Open AI chat / Открыть чат с AI
@@ -160,7 +160,14 @@ info              # Help screen / Справка
 
 | Command | EN | RU |
 |---|---|---|
-| `sysinfo` | Hardware info | Информация о ПК |
+| `sysinfo` | Full system diagnostics | Полная диагностика системы |
+| `sysinfo live` | Live monitoring | Мониторинг в реальном времени |
+| `sysinfo live -Log` | Live monitoring with CSV history | Мониторинг с историей CSV |
+| `sysinfo deep [-Days N]` | Extended event/device/security analysis | Расширенный анализ событий/устройств/безопасности |
+| `sysinfo setup` | Install verified sensor library | Установка библиотеки датчиков с проверкой хеша |
+| `sysinfo export [-Path BASE]` | Export HTML/JSON | Экспорт HTML/JSON |
+| `sysinfo history` | Recent telemetry history | История измерений |
+| `sysinfo help` | Sysinfo mode help | Справка по режимам sysinfo |
 | `dash` `d` | Full dashboard | Полный дашборд |
 | `autostart` | Startup audit | Аудит автозагрузки |
 | `autostart -All` | All startup items | Все записи |
@@ -475,7 +482,7 @@ C:\ARGONOV\
     │   ├── navigation.ps1     .., ~, ll, mkcd, touch
     │   ├── processes.ps1      top, psg, pskill, bigfiles
     │   ├── security.ps1       Antivirus integration
-    │   └── sysinfo.ps1        Hardware info
+    │   └── sysinfo.ps1        Diagnostic center: sensors, events and health analysis
     ├── network\
     │   ├── network.ps1        myip, ports, ping-http, dns
     │   └── proxy.ps1          Proxy manager

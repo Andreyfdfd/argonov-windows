@@ -1,0 +1,49 @@
+name: PowerShell validation
+
+on:
+  push:
+    branches: [main, 'feature/**']
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  sysinfo-validation:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Parse changed PowerShell entry points
+        shell: pwsh
+        run: |
+          $files = @(
+            'modules/system/sysinfo.ps1',
+            'modules/core/commands.ps1',
+            'modules/core/info.ps1',
+            'modules/ai/ai.ps1',
+            'tests/Test-Sysinfo.ps1'
+          )
+          $failures = [System.Collections.Generic.List[string]]::new()
+          foreach ($file in $files) {
+            if (-not (Test-Path -LiteralPath $file)) {
+              $failures.Add("Missing file: $file") | Out-Null
+              continue
+            }
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $file), [ref]$tokens, [ref]$errors) | Out-Null
+            foreach ($errorItem in $errors) {
+              $failures.Add("${file}:$($errorItem.Extent.StartLineNumber): $($errorItem.Message)") | Out-Null
+            }
+          }
+          if ($failures.Count -gt 0) {
+            $failures | ForEach-Object { Write-Error $_ }
+            throw 'PowerShell parser validation failed.'
+          }
+          Write-Host 'PowerShell parser validation passed.' -ForegroundColor Green
+
+      - name: Run sysinfo integration smoke test
+        shell: pwsh
+        run: ./tests/Test-Sysinfo.ps1
