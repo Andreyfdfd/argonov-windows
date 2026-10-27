@@ -62,7 +62,7 @@ try {
     $output = & pwsh -NoLogo -NoProfile -File $uninstallPath -ProfilePath $malformedPath 2>&1 | Out-String
     $exitCode = $LASTEXITCODE
     if ($exitCode -eq 0) { throw 'Malformed profile markers unexpectedly succeeded.' }
-    if [System.IO.File]::ReadAllText($malformedPath) -cne $malformedFixture) { throw 'Malformed profile was changed despite a marker error.' }
+    if ([System.IO.File]::ReadAllText($malformedPath) -cne $malformedFixture) { throw 'Malformed profile was changed despite a marker error.' }
 
     Write-Host 'Uninstaller profile-preservation tests passed.' -ForegroundColor Green
     Write-Host 'Uninstaller WhatIf test passed.' -ForegroundColor Green
