@@ -213,7 +213,8 @@ info              # Help screen / Справка
 | `path` | Contents of $PATH | Содержимое $PATH |
 | `svc FILTER` | Windows services | Службы Windows |
 | `startup` | Autorun entries | Автозагрузка |
-| `cleanup` | Temp size preview | Размер temp |
+| `cleanup [-OlderThanDays N]` | Preview eligible TEMP files; configurable age threshold | Предпросмотр файлов TEMP с настраиваемым возрастом |
+| `cleanup -Execute [-OlderThanDays N] [-WhatIf]` | Delete eligible files only after confirmation; supports `-WhatIf` | Удаление после подтверждения; поддерживает `-WhatIf` |
 | `cleanup -Execute` | Clean temp | Очистка temp |
 | `uptime` | System uptime | Аптайм системы |
 
@@ -251,6 +252,10 @@ Detailed diagnostics, data-source limits and privacy notes: [SYSINFO guide](docs
 **Proxy safety / Безопасность прокси:** `proxy-use` writes to the current user's Windows Internet Settings. Before changing them, it saves the original `ProxyEnable`, `ProxyServer` and `ProxyOverride` values in `$HOME\.argonov-proxy\original-settings.json`. Switching proxy servers keeps the original snapshot; `proxy-clear` restores it and removes the snapshot. If no snapshot exists, `proxy-clear` asks before disabling the current proxy without restoring a baseline. Public proxies are untrusted; do not use them for passwords, banking or sensitive activity. `proxy-use -Force` bypasses the confirmation prompt only, not the warning output.
 
 **Безопасность прокси:** `proxy-use` меняет настройки Internet Settings текущего пользователя Windows. Перед изменением сохраняются исходные значения `ProxyEnable`, `ProxyServer` и `ProxyOverride` в `$HOME\.argonov-proxy\original-settings.json`. При переключении прокси исходный снимок не перезаписывается; `proxy-clear` восстанавливает настройки и удаляет снимок. Если сохранённого снимка нет, команда спрашивает подтверждение перед отключением текущего прокси без восстановления исходных значений. Публичным прокси нельзя доверять: не используй их для паролей, банковских операций и чувствительных действий. `proxy-use -Force` отключает только интерактивный запрос подтверждения, но не предупреждения.
+
+**Cleanup safety / Безопасность очистки:** `cleanup` is preview-only by default and considers files older than one day in the user's `%TEMP%`. Use `-OlderThanDays N` to change the age threshold. `cleanup -Execute` requests confirmation and honours PowerShell's `-WhatIf`/ `-Confirm`; it deletes files only, skips reparse points/linked items and re-checks file age immediately before deletion.
+
+**Безопасность очистки:** по умолчанию `cleanup` только показывает подходящие файлы во временном каталоге пользователя, старше одного дня. Порог можно менять через `-OlderThanDays N`. Команда `cleanup -Execute` запрашивает подтверждение и поддерживает `-WhatIf`/ `-Confirm`; удаляются только файлы, ссылки и точки соединения пропускаются, а возраст файла проверяется повторно непосредственно перед удалением.
 
 ### OSINT
 
@@ -445,7 +450,8 @@ argonov-windows/
 │   ├── Test-Reorganize.ps1
 │   ├── Test-Uninstall.ps1
 │   ├── Test-ProxySettings.ps1
-│   └── Test-Wget.ps1
+│   ├── Test-Wget.ps1
+│   └── Test-Cleanup.ps1
 └── modules/
     ├── ai/
     ├── core/
@@ -488,6 +494,7 @@ pwsh -NoLogo -NoProfile -File .\tests\Test-Reorganize.ps1
 pwsh -NoLogo -NoProfile -File .\tests\Test-ProxySettings.ps1
 pwsh -NoLogo -NoProfile -File .\tests\Test-Uninstall.ps1
 pwsh -NoLogo -NoProfile -File .\tests\Test-Wget.ps1
+pwsh -NoLogo -NoProfile -File .\tests\Test-Cleanup.ps1
 ```
 
 ## Tech Stack / Технологии
