@@ -5,14 +5,21 @@ $script:AI_MODEL = "deepseek/deepseek-r1-0528-qwen3-8b"
 $script:AI_HISTORY = @()
 $script:AI_YOLO = $false
 $script:AI_DRY = $false
-$script:LMS = "$HOME\.lmstudio\bin\lms.exe"
+$script:LMS = Join-Path $HOME '.lmstudio\bin\lms.exe'
+
+# Resolve the project root from the profile when available, or from this module's location.
+$script:AI_ROOT = if ($global:ARGONOV_ROOT) {
+    [System.IO.Path]::GetFullPath($global:ARGONOV_ROOT)
+} else {
+    [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
+}
 
 $script:AI_SANDBOX = @(
-    "C:\ARGONOV",
-    "$HOME",
-    "$HOME\Documents",
-    "$HOME\Downloads",
-    "$HOME\Desktop"
+    $script:AI_ROOT,
+    $HOME,
+    (Join-Path $HOME 'Documents'),
+    (Join-Path $HOME 'Downloads'),
+    (Join-Path $HOME 'Desktop')
 )
 
 $script:AI_DANGER = @(
@@ -27,6 +34,15 @@ $script:AI_DANGER = @(
 )
 
 function ai-system-prompt {
+    $root = $script:AI_ROOT
+    $helloPath = Join-Path $root 'hello.ps1'
+    $profilePath = Join-Path $root 'profile.ps1'
+    $sysinfoPath = Join-Path $root 'modules\system\sysinfo.ps1'
+    $newProjectPath = Join-Path $root 'new-project'
+    $modulesPath = Join-Path $root 'modules'
+    $oldFilePath = Join-Path $root 'old-file.txt'
+    $sysinfoQuoted = $sysinfoPath.Replace("'", "''")
+
     $lines = @(
         'Ты AI-ассистент внутри ARGONOV SHELL на Windows 11.',
         'Отвечай по-русски, кратко и по делу.',
@@ -35,39 +51,39 @@ function ai-system-prompt {
         '',
         'СОЗДАТЬ/ИЗМЕНИТЬ ФАЙЛ:',
         '```write',
-        'C:\ARGONOV\hello.ps1',
+        $helloPath,
         'Write-Host "привет"',
         '```',
         '',
         'ПРОЧИТАТЬ ФАЙЛ:',
         '```read',
-        'C:\ARGONOV\profile.ps1',
+        $profilePath,
         '```',
         '',
         'ЗАПУСТИТЬ КОМАНДУ:',
         '```exec',
-        '. ''C:\ARGONOV\modules\system\sysinfo.ps1''; sysinfo',
+        ". '$sysinfoQuoted'; sysinfo",
         '```',
         '',
         'СОЗДАТЬ ПАПКУ:',
         '```mkdir',
-        'C:\ARGONOV\new-project',
+        $newProjectPath,
         '```',
         '',
         'СПИСОК ФАЙЛОВ:',
         '```list',
-        'C:\ARGONOV\modules',
+        $modulesPath,
         '```',
         '',
         'УДАЛИТЬ:',
         '```delete',
-        'C:\ARGONOV\old-file.txt',
+        $oldFilePath,
         '```',
         '',
         'КРИТИЧЕСКИ ВАЖНО:',
         '- Не проси пользователя делать что-то вручную — используй блоки.',
         '- Не выдумывай Linux-команды (ls, cat, rm, nano).',
-        '- Пути только абсолютные: C:\ARGONOV\file.ps1'
+        "- Пути только абсолютные, например: $helloPath"
     )
     $prompt = $lines -join "`n"
     $sandbox = ($script:AI_SANDBOX | ForEach-Object { "  - $_" }) -join "`n"
@@ -83,13 +99,30 @@ function ai-is-danger {
 
 function ai-is-sandbox {
     param([string]$Path)
-    try { $full = [System.IO.Path]::GetFullPath($Path) } catch { return $false }
+
+    try {
+        $full = [System.IO.Path]::GetFullPath($Path)
+    } catch {
+        return $false
+    }
+
     foreach ($root in $script:AI_SANDBOX) {
         try {
-            $rootFull = [System.IO.Path]::GetFullPath($root)
-            if ($full.StartsWith($rootFull, [System.StringComparison]::OrdinalIgnoreCase)) { return $true }
-        } catch {}
+            $rootFull = [System.IO.Path]::GetFullPath($root).TrimEnd([char[]]@('\', '/'))
+            if ($full.Equals($rootFull, [System.StringComparison]::OrdinalIgnoreCase)) {
+                return $true
+            }
+
+            # Require a path separator after the root to reject prefix lookalikes such as ARGONOV-OLD.
+            $rootPrefix = $rootFull + [System.IO.Path]::DirectorySeparatorChar
+            if ($full.StartsWith($rootPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+                return $true
+            }
+        } catch {
+            # Ignore malformed sandbox entries and continue checking the remaining roots.
+        }
     }
+
     return $false
 }
 
