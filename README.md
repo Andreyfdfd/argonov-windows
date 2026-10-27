@@ -103,7 +103,7 @@ pwsh -NoLogo -NoProfile -File .\install.ps1 -ValidateOnly
 pwsh -NoLogo -NoProfile -File .\install.ps1
 §§§
 
-The installer adds a marked, repeatable entry to the current PowerShell profile and backs up an existing profile before changing it. It does not change the system or user ExecutionPolicy. Restart PowerShell 7 to load ARGONOV SHELL.
+The installer adds a marked, repeatable entry to the current PowerShell profile and backs up an existing profile before changing it. The optional `-ProfilePath` parameter targets a specific profile file; by default, the installer uses `$PROFILE`. It does not change the system or user ExecutionPolicy. Restart PowerShell 7 to load ARGONOV SHELL.
 
 Установщик добавляет отдельный маркированный блок в профиль текущего PowerShell, поддерживает повторный запуск и создаёт резервную копию существующего профиля перед изменением. Политика выполнения скриптов автоматически не меняется. Перезапусти PowerShell 7, чтобы загрузить оболочку.
 
@@ -433,6 +433,7 @@ argonov-windows/
 │   ├── Test-Sysinfo.ps1
 │   ├── Test-AISandbox.ps1
 │   ├── Test-Backup.ps1
+│   ├── Test-Install.ps1
 │   ├── Test-Reorganize.ps1
 │   └── Test-Uninstall.ps1
 └── modules/
@@ -472,6 +473,7 @@ pwsh -NoLogo -NoProfile -File .\install.ps1 -ValidateOnly
 pwsh -NoLogo -NoProfile -File .\tests\Test-Sysinfo.ps1
 pwsh -NoLogo -NoProfile -File .\tests\Test-AISandbox.ps1
 pwsh -NoLogo -NoProfile -File .\tests\Test-Backup.ps1
+pwsh -NoLogo -NoProfile -File .\tests\Test-Install.ps1
 pwsh -NoLogo -NoProfile -File .\tests\Test-Reorganize.ps1
 pwsh -NoLogo -NoProfile -File .\tests\Test-Uninstall.ps1
 ```
