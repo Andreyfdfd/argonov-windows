@@ -55,6 +55,7 @@ jobs:
             'tests/Test-Backup.ps1',
             'tests/Test-Install.ps1',
             'tests/Test-Reorganize.ps1',
+            'tests/Test-ProxySettings.ps1',
             'tests/Test-Uninstall.ps1'
           )
 
