@@ -229,7 +229,11 @@ Detailed diagnostics, data-source limits and privacy notes: [SYSINFO guide](docs
 | `dns NAME` | DNS lookup | DNS-запрос |
 | `ports FILTER` | Listening ports | Занятые порты |
 | `is-port N` | Check port | Проверить порт |
-| `wget URL` | Download file | Скачать файл |
+| `wget URL [-Out PATH] [-Force] [-TimeoutSec N] [-WhatIf]` | Download HTTP/HTTPS files safely; refuses overwrite by default | Безопасная загрузка HTTP/HTTPS; по умолчанию не перезаписывает файл |
+
+**Download safety / Безопасность загрузки:** `wget` accepts absolute HTTP/HTTPS URLs only, derives the default filename from the URL path (not its query string), and resolves relative output paths against PowerShell's current filesystem location. Existing files are preserved unless `-Force` is specified. Downloads are written to a temporary file and moved into place only after a successful request; `-WhatIf` previews the operation.
+
+**Безопасность загрузки:** `wget` принимает только абсолютные HTTP/HTTPS URL, определяет имя файла по пути URL без строки запроса и разрешает относительный путь относительно текущего каталога PowerShell. Существующий файл сохраняется без `-Force`. Загрузка сначала идёт во временный файл, который переносится на место только после успешного запроса; `-WhatIf` показывает планируемое действие.
 
 ### Proxy / Прокси
 
@@ -440,7 +444,8 @@ argonov-windows/
 │   ├── Test-Install.ps1
 │   ├── Test-Reorganize.ps1
 │   ├── Test-Uninstall.ps1
-│   └── Test-ProxySettings.ps1
+│   ├── Test-ProxySettings.ps1
+│   └── Test-Wget.ps1
 └── modules/
     ├── ai/
     ├── core/
@@ -482,6 +487,7 @@ pwsh -NoLogo -NoProfile -File .\tests\Test-Install.ps1
 pwsh -NoLogo -NoProfile -File .\tests\Test-Reorganize.ps1
 pwsh -NoLogo -NoProfile -File .\tests\Test-ProxySettings.ps1
 pwsh -NoLogo -NoProfile -File .\tests\Test-Uninstall.ps1
+pwsh -NoLogo -NoProfile -File .\tests\Test-Wget.ps1
 ```
 
 ## Tech Stack / Технологии
