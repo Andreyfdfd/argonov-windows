@@ -239,10 +239,14 @@ Detailed diagnostics, data-source limits and privacy notes: [SYSINFO guide](docs
 | `proxy-test [-Max N]` | Test proxies | Проверить прокси |
 | `proxy-test-one PROXY` | Test one proxy | Проверить один |
 | `proxy-top` | Top proxies | ТОП-20 рабочих |
-| `proxy-use N` | Apply proxy #N | Включить прокси #N |
-| `proxy-clear` | Disable proxy | Отключить прокси |
+| `proxy-use N` | Apply proxy #N after confirmation; saves original settings | Включить прокси #N после подтверждения; сохраняет прежние настройки |
+| `proxy-clear` | Restore the saved Windows user proxy settings | Восстановить сохранённые настройки прокси Windows |
 | `proxy-status` | Current status | Статус |
 | `proxy-count` | Count proxies | Количество |
+
+**Proxy safety / Безопасность прокси:** `proxy-use` writes to the current user's Windows Internet Settings. Before changing them, it saves the original `ProxyEnable`, `ProxyServer` and `ProxyOverride` values in `$HOME\.argonov-proxy\original-settings.json`. Switching proxy servers keeps the original snapshot; `proxy-clear` restores it and removes the snapshot. If no snapshot exists, `proxy-clear` asks before disabling the current proxy without restoring a baseline. Public proxies are untrusted; do not use them for passwords, banking or sensitive activity. `proxy-use -Force` bypasses the confirmation prompt only, not the warning output.
+
+**Безопасность прокси:** `proxy-use` меняет настройки Internet Settings текущего пользователя Windows. Перед изменением сохраняются исходные значения `ProxyEnable`, `ProxyServer` и `ProxyOverride` в `$HOME\.argonov-proxy\original-settings.json`. При переключении прокси исходный снимок не перезаписывается; `proxy-clear` восстанавливает настройки и удаляет снимок. Если сохранённого снимка нет, команда спрашивает подтверждение перед отключением текущего прокси без восстановления исходных значений. Публичным прокси нельзя доверять: не используй их для паролей, банковских операций и чувствительных действий. `proxy-use -Force` отключает только интерактивный запрос подтверждения, но не предупреждения.
 
 ### OSINT
 
@@ -435,7 +439,8 @@ argonov-windows/
 │   ├── Test-Backup.ps1
 │   ├── Test-Install.ps1
 │   ├── Test-Reorganize.ps1
-│   └── Test-Uninstall.ps1
+│   ├── Test-Uninstall.ps1
+│   └── Test-ProxySettings.ps1
 └── modules/
     ├── ai/
     ├── core/
@@ -475,6 +480,7 @@ pwsh -NoLogo -NoProfile -File .\tests\Test-AISandbox.ps1
 pwsh -NoLogo -NoProfile -File .\tests\Test-Backup.ps1
 pwsh -NoLogo -NoProfile -File .\tests\Test-Install.ps1
 pwsh -NoLogo -NoProfile -File .\tests\Test-Reorganize.ps1
+pwsh -NoLogo -NoProfile -File .\tests\Test-ProxySettings.ps1
 pwsh -NoLogo -NoProfile -File .\tests\Test-Uninstall.ps1
 ```
 
