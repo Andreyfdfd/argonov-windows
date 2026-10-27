@@ -1,41 +1,69 @@
-﻿# ARGONOV SHELL · completion
+# ARGONOV SHELL - PSReadLine configuration
 
-Import-Module PSReadLine -ErrorAction SilentlyContinue
-
-# ─── Серые подсказки отключены ───
-Set-PSReadLineOption -PredictionSource None -ErrorAction SilentlyContinue
-Set-PSReadLineOption -BellStyle None -ErrorAction SilentlyContinue
-Set-PSReadLineOption -MaximumHistoryCount 20000 -ErrorAction SilentlyContinue
-Set-PSReadLineOption -HistorySearchCursorMovesToEnd -ErrorAction SilentlyContinue
-
-# ─── Tab = меню с навигацией ───
-Set-PSReadLineKeyHandler -Key Tab -Function MenuComplete -ErrorAction SilentlyContinue
-
-# ↑↓ в меню, Enter выбрать, Esc закрыть — встроено в MenuComplete
-
-# ─── История ───
-Set-PSReadLineKeyHandler -Key UpArrow   -Function HistorySearchBackward -ErrorAction SilentlyContinue
-Set-PSReadLineKeyHandler -Key DownArrow -Function HistorySearchForward  -ErrorAction SilentlyContinue
-Set-PSReadLineKeyHandler -Key Ctrl+r -Function ReverseSearchHistory -ErrorAction SilentlyContinue
-
-# ─── Прочее ───
-Set-PSReadLineKeyHandler -Key Ctrl+d -Function DeleteCharOrExit -ErrorAction SilentlyContinue
-Set-PSReadLineKeyHandler -Key Ctrl+LeftArrow  -Function BackwardWord -ErrorAction SilentlyContinue
-Set-PSReadLineKeyHandler -Key Ctrl+RightArrow -Function ForwardWord  -ErrorAction SilentlyContinue
-
-# ─── Цвета ───
 try {
-    Set-PSReadLineOption -Colors @{
-        Command   = 'BrightGreen'
-        Parameter = 'Gray'
-        Operator  = 'BrightYellow'
-        Variable  = 'BrightCyan'
-        String    = 'BrightYellow'
-        Number    = 'BrightMagenta'
-        Type      = 'BrightBlue'
-        Comment   = 'DarkGray'
-        Keyword   = 'BrightBlue'
-        Error     = 'BrightRed'
-        Selection = 'BrightCyan'
+    Import-Module PSReadLine -ErrorAction Stop
+} catch {
+    # PSReadLine is optional in non-interactive or minimal PowerShell installations.
+    return
+}
+
+$optionCommand = Get-Command Set-PSReadLineOption -ErrorAction SilentlyContinue
+$keyHandlerCommand = Get-Command Set-PSReadLineKeyHandler -ErrorAction SilentlyContinue
+
+if ($optionCommand) {
+    $optionNames = $optionCommand.Parameters
+
+    # PredictionSource is not present in every PSReadLine release.
+    if ($optionNames.ContainsKey('PredictionSource')) {
+        Set-PSReadLineOption -PredictionSource None -ErrorAction SilentlyContinue
     }
-} catch {}
+    if ($optionNames.ContainsKey('BellStyle')) {
+        Set-PSReadLineOption -BellStyle None -ErrorAction SilentlyContinue
+    }
+    if ($optionNames.ContainsKey('MaximumHistoryCount')) {
+        Set-PSReadLineOption -MaximumHistoryCount 20000 -ErrorAction SilentlyContinue
+    }
+    if ($optionNames.ContainsKey('HistorySearchCursorMovesToEnd')) {
+        Set-PSReadLineOption -HistorySearchCursorMovesToEnd -ErrorAction SilentlyContinue
+    }
+
+    if ($optionNames.ContainsKey('Colors')) {
+        try {
+            Set-PSReadLineOption -Colors @{
+                Command   = 'Green'
+                Parameter = 'Gray'
+                Operator  = 'Yellow'
+                Variable  = 'Cyan'
+                String    = 'Yellow'
+                Number    = 'Magenta'
+                Type      = 'Blue'
+                Comment   = 'DarkGray'
+                Keyword   = 'Blue'
+                Error     = 'Red'
+                Selection = 'Cyan'
+            } -ErrorAction Stop
+        } catch {
+            # Theme configuration must never prevent the terminal from starting.
+        }
+    }
+}
+
+if ($keyHandlerCommand) {
+    $keyHandlers = @(
+        @{ Key = 'Tab';             Function = 'MenuComplete' },
+        @{ Key = 'UpArrow';         Function = 'HistorySearchBackward' },
+        @{ Key = 'DownArrow';       Function = 'HistorySearchForward' },
+        @{ Key = 'Ctrl+r';          Function = 'ReverseSearchHistory' },
+        @{ Key = 'Ctrl+d';          Function = 'DeleteCharOrExit' },
+        @{ Key = 'Ctrl+LeftArrow';  Function = 'BackwardWord' },
+        @{ Key = 'Ctrl+RightArrow'; Function = 'ForwardWord' }
+    )
+
+    foreach ($handler in $keyHandlers) {
+        try {
+            Set-PSReadLineKeyHandler -Key $handler.Key -Function $handler.Function -ErrorAction Stop
+        } catch {
+            # Some hosts or PSReadLine versions do not support all key bindings.
+        }
+    }
+}
