@@ -8,7 +8,7 @@
 
 ![PowerShell](https://img.shields.io/badge/PowerShell-7.6-5391FE?style=flat-square&logo=powershell&logoColor=white)
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?style=flat-square&logo=windows&logoColor=white)
-![Git](https://img.shields.io/badge/Git-SSH-F05032?style=flat-square&logo=git&logoColor=white)
+![Git](https://img.shields.io/badge/Git-optional-F05032?style=flat-square&logo=git&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)
 ![Commands](https://img.shields.io/badge/Commands-108-brightgreen?style=flat-square)
 
@@ -36,9 +36,9 @@
 
 ## Overview / Обзор
 
-**EN:** ARGONOV SHELL is a personal shell environment for Windows 11 built on top of **PowerShell 7**. It transforms the default terminal into a comprehensive toolbox for development, automation, AI assistance, OSINT research, and engineering tasks. The shell loads automatically when you open Windows Terminal.
+**EN:** ARGONOV SHELL is a customizable PowerShell environment for Windows 10/11. After installation, its profile is loaded when you start a PowerShell 7 session. It combines command-line helpers, system diagnostics, optional local AI, network utilities, OSINT helpers, backups and CAD/CAM launchers.
 
-**RU:** ARGONOV SHELL — персональная оболочка для Windows 11, построенная поверх **PowerShell 7**. Превращает стандартный терминал в полноценный инструментарий для разработки, автоматизации, AI-ассистента, OSINT-исследований и инженерных задач. Оболочка загружается автоматически при открытии Windows Terminal.
+**RU:** ARGONOV SHELL — настраиваемая среда PowerShell для Windows 10/11. После установки её профиль загружается при запуске сеанса PowerShell 7. В проект входят команды навигации, диагностика системы, необязательная интеграция с локальным ИИ, сетевые и OSINT-инструменты, резервное копирование и запуск CAD/CAM-программ.
 
 **Status / Статус:** Personal project, actively developed. 108 command catalog entries across 22 PowerShell module files in 8 module folders. / Персональный проект, активно развивается. 108 записей в каталоге команд, 22 PowerShell-модуля в 8 папках.
 
@@ -50,7 +50,7 @@
 |---|---|
 | **⚡ Auto-loading** / Автозагрузка | Loads profile on every terminal start / Профиль подхватывается при каждом старте |
 | **🎨 Custom prompt** / Кастомный промпт | Two-line prompt with path, git branch, time / Двухстрочный промпт: путь, git-ветка, время |
-| **📦 96 commands** / 96 команд | Aliases, functions, utilities / Алиасы, функции, утилиты |
+| **📦 108 catalog entries** / 108 записей | Aliases, functions, utilities / Алиасы, функции, утилиты |
 | **🤖 AI agent** / AI-агент | Local LLM (LM Studio) / Локальная LLM (LM Studio) |
 | **🕵️ OSINT toolkit** / OSINT-мультитул | IP, DNS, WHOIS, ports, hashes / IP, DNS, WHOIS, порты, хэши |
 | **🌐 Proxy manager** / Прокси-менеджер | Fetch ~6000 public proxies / ~6000 публичных прокси |
@@ -65,50 +65,74 @@
 
 ## Requirements / Требования
 
-| Component / Компонент | Version / Версия | Purpose / Назначение |
+| Component / Компонент | Requirement / Требование | Notes / Примечание |
 |---|---|---|
-| **Windows** | 10 or 11 | OS / ОС |
-| **PowerShell** | 7.6+ | Shell runtime / Среда выполнения |
-| **Git** | Any recent | Repo management / Работа с репозиторием |
-| **SSH key** / SSH-ключ | ED25519 | GitHub without password / GitHub без пароля |
-| **LM Studio** | Latest | AI backend (optional) / Backend для AI (опционально) |
-| **Python** | 3.14 | Scripts (optional) / Скрипты (опционально) |
+| **Windows** | Windows 10/11; Windows 11 is the primary target | Some features depend on installed Windows components |
+| **PowerShell** | **7.6 or newer** | Required. Windows PowerShell 5.1 is not supported |
+| **Git** | Optional | Needed for Git aliases and repository status display |
+| **LM Studio** | Optional | Needed for local AI chat and model management |
+| **Python** | Optional | Only needed by external or user-added Python-dependent workflows |
 
-> 💡 **EN:** ARGONOV SHELL works without LM Studio — everything except `ai` commands.
-> **RU:** ARGONOV SHELL работает без LM Studio — всё, кроме команд `ai`.
+The core shell does not require Git, an SSH key, Python or LM Studio. Optional integrations may be unavailable until their dependencies are installed.
+
+Ядро оболочки не требует Git, SSH-ключа, Python или LM Studio. Дополнительные интеграции будут недоступны, пока не установлены соответствующие зависимости.
 
 ---
 
 ## Installation / Установка
 
-### Option 1 / Вариант 1 — Clone from GitHub / Клонирование
+### Option 1 / Вариант 1 — Download ZIP / Скачать ZIP
 
-```powershell
-git clone git@github.com:Andreyfdfd/argonov-windows.git C:\ARGONOV
+This is the simplest path and does not require Git or an SSH key.
 
-if (-not (Test-Path $PROFILE)) {
-    New-Item -ItemType File -Path $PROFILE -Force | Out-Null
-}
-Add-Content -Path $PROFILE -Value '. C:\ARGONOV\profile.ps1' -Encoding UTF8
-```
+Это самый простой способ; Git и SSH-ключ не нужны.
 
-**EN:** Restart Windows Terminal. Done.
-**RU:** Перезапустить Windows Terminal. Готово.
+1. Open the [GitHub repository](https://github.com/Andreyfdfd/argonov-windows).
+2. Click **Code → Download ZIP** and extract the archive to a folder you own, for example §$HOME\Tools\ARGONOV§.
+3. Open PowerShell 7.6+ and change to the extracted project folder.
+4. Validate the scripts before installation:
 
-### Option 2 / Вариант 2 — Installer / Установщик
+§§§powershell
+Set-Location "$HOME\Tools\ARGONOV"
+pwsh -NoLogo -NoProfile -File .\install.ps1 -ValidateOnly
+§§§
 
-```powershell
-pwsh -ExecutionPolicy Bypass -File C:\ARGONOV\install.ps1
-```
+5. If validation succeeds, run the installer:
 
-**EN:** The installer checks PowerShell 7, Python, Git, SSH key, LM Studio, project structure, profile connection, and all module syntax.
-**RU:** Установщик проверяет PowerShell 7, Python, Git, SSH-ключ, LM Studio, структуру проекта, подключение профиля и синтаксис всех модулей.
+§§§powershell
+pwsh -NoLogo -NoProfile -File .\install.ps1
+§§§
 
-### Optional / Опционально — Enable script execution / Разрешить скрипты
+The installer adds a marked, repeatable entry to the current PowerShell profile and backs up an existing profile before changing it. It does not change the system or user ExecutionPolicy. Restart PowerShell 7 to load ARGONOV SHELL.
 
-```powershell
-Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force
-```
+Установщик добавляет отдельный маркированный блок в профиль текущего PowerShell, поддерживает повторный запуск и создаёт резервную копию существующего профиля перед изменением. Политика выполнения скриптов автоматически не меняется. Перезапусти PowerShell 7, чтобы загрузить оболочку.
+
+### Option 2 / Вариант 2 — Clone with HTTPS / Клонировать по HTTPS
+
+Git is optional. If it is installed, HTTPS cloning does not require an SSH key.
+
+Git необязателен. Если он установлен, можно использовать HTTPS без SSH-ключа.
+
+§§§powershell
+git clone https://github.com/Andreyfdfd/argonov-windows.git "$HOME\Tools\ARGONOV"
+Set-Location "$HOME\Tools\ARGONOV"
+pwsh -NoLogo -NoProfile -File .\install.ps1 -ValidateOnly
+pwsh -NoLogo -NoProfile -File .\install.ps1
+§§§
+
+### Troubleshooting / Если запуск скриптов заблокирован
+
+The installer intentionally does not weaken your execution policy. If PowerShell blocks a script, first review your organisation's policy and the downloaded source. Only if you trust the source and control the device, you may choose to allow locally created scripts for your user:
+
+Установщик намеренно не ослабляет политику выполнения. Если PowerShell блокирует скрипт, сначала проверь политику устройства и источник файла. Только если ты доверяешь исходникам и управляешь устройством, можно разрешить локальные скрипты для текущего пользователя:
+
+§§§powershell
+Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
+§§§
+
+Do not use administrator privileges just to install the shell. The installer requires PowerShell 7.6+ and stops before profile changes if script syntax validation fails.
+
+Не запускай установку от администратора без необходимости. Установщик требует PowerShell 7.6+ и прекращает работу до изменения профиля, если обнаруживает ошибки синтаксиса.
 
 ---
 
@@ -320,3 +344,141 @@ Detailed diagnostics, data-source limits and privacy notes: [SYSINFO guide](docs
 **RU:** AI-агент умеет выполнять действия через специальные блоки.
 
 **Write file / Создать или изменить файл** — `write`:
+
+The AI agent supports these tagged actions:
+
+| Block / Блок | Purpose / Назначение |
+|---|---|
+| `write` | Create or overwrite a file / Создать или перезаписать файл |
+| `read` | Read a file / Прочитать файл |
+| `exec` | Run a PowerShell command / Запустить команду PowerShell |
+| `mkdir` | Create a directory / Создать каталог |
+| `list` | List directory contents / Показать содержимое каталога |
+| `delete` | Delete a file or directory / Удалить файл или каталог |
+
+Default mode requests confirmation for file and command actions. `ai -Yolo` skips those confirmations and must be used with care. `ai -Dry` previews supported actions without applying them. The agent uses the locally configured LM Studio endpoint by default.
+
+### AI action example / Пример действия ИИ
+
+```
+write
+<project-root>\hello.ps1
+Write-Host "Привет"
+```
+
+The path must be inside an allowed directory configured by the AI module. The allowed-path check is an application-level guard, not a Windows security boundary.
+
+## Safety / Безопасность
+
+- The `ai-exec` path launches a PowerShell process. Treat model-generated commands as untrusted code and read each command before allowing execution.
+- `ai -Yolo` removes confirmation prompts; it is not a security mode.
+- Dangerous-command filters are heuristic checks and cannot guarantee detection of every harmful command or script.
+- Some utilities make network requests to external services (external-IP lookup, IP geolocation, proxy lists and URL-shortening services). Review the relevant module before use in sensitive environments.
+- System reports may contain computer names, device details and event-log text. Inspect exported HTML/JSON reports before sharing them publicly.
+- Backups can contain source files and configuration. Keep them in a private location.
+
+- В `ai-exec` запускается отдельный процесс PowerShell. Считай команды модели недоверенным кодом и читай их до подтверждения.
+- `ai -Yolo` отключает подтверждения, а не повышает безопасность.
+- Фильтры опасных команд эвристические и не гарантируют обнаружение всех вредоносных действий.
+- Некоторые команды обращаются к внешним сервисам: определение внешнего IP, IP-геолокация, загрузка списков прокси или сокращение ссылок.
+- Системные отчёты могут содержать имя компьютера, сведения об устройствах и текст журналов событий. Проверяй HTML/JSON перед публикацией.
+- Резервные копии могут включать исходники и конфигурацию; храни их в закрытом каталоге.
+
+## Architecture / Архитектура
+
+The installer adds an entry to the current PowerShell profile. `profile.ps1` resolves the project root from its own location and loads modules from `modules\<category>\*.ps1` in a defined order. No specific installation directory is required.
+
+Установщик добавляет запись в профиль текущего PowerShell. Файл `profile.ps1` определяет корень проекта относительно своего расположения и загружает модули из `modules\<категория>\*.ps1` в заданном порядке. Фиксированный путь установки не требуется.
+
+Load order / Порядок загрузки:
+
+1. `core` — completion, command catalog and prompt
+2. `system` — system information, dashboard and utilities
+3. `network` — network and proxy tools
+4. `ai` — AI agent and LM Studio helpers
+5. `tools` — backups, screenshots and CAD/CAM launchers
+6. `dev` — Git aliases
+7. `osint` — DNS, IP, WHOIS and hashing helpers
+8. `fun` — terminal effects
+
+## Project Structure / Структура проекта
+
+```text
+argonov-windows/
+├── profile.ps1
+├── install.ps1
+├── reorganize.ps1
+├── README.md
+├── ROADMAP.md
+├── CHANGELOG.md
+├── LICENSE
+├── CONTRIBUTING.md
+├── docs/
+│   └── SYSINFO.md
+├── tests/
+│   ├── Test-Sysinfo.ps1
+│   ├── Test-AISandbox.ps1
+│   ├── Test-Backup.ps1
+│   └── Test-Reorganize.ps1
+└── modules/
+    ├── ai/
+    ├── core/
+    ├── dev/
+    ├── fun/
+    ├── network/
+    ├── osint/
+    ├── system/
+    └── tools/
+```
+
+## Configuration / Конфигурация
+
+- To change the default AI model, edit `$script:AI_MODEL` in `modules/ai/ai.ps1`.
+- The AI module derives its project root from the profile or its own module path.
+- Backups are stored in `$HOME\ARGONOV-Backups` by default. You can set `$global:ARGONOV_BACKUP_DIR` before loading the backup module to choose another folder.
+- Optional modules can be disabled by renaming their `.ps1` file so it no longer matches the module loader's `*.ps1` pattern.
+
+- Чтобы сменить модель по умолчанию, измени `$script:AI_MODEL` в `modules/ai/ai.ps1`.
+- AI-модуль определяет корень проекта относительно профиля или собственного пути.
+- По умолчанию резервные копии хранятся в `$HOME\ARGONOV-Backups`. Для другого каталога до загрузки модуля можно задать `$global:ARGONOV_BACKUP_DIR`.
+- Дополнительный модуль можно отключить, переименовав его `.ps1` так, чтобы он не попадал под маску загрузчика.
+
+## Coding Conventions / Соглашения
+
+- Runtime requirement: PowerShell 7.6 or newer. Windows PowerShell 5.1 is not supported.
+- Use UTF-8 for source files. Do not convert scripts to ANSI or UTF-16.
+- Keep changes focused and test one logical change at a time.
+- Validate all PowerShell files and run the relevant smoke tests before opening a pull request.
+
+Порядок проверки:
+
+```powershell
+pwsh -NoLogo -NoProfile -File .\install.ps1 -ValidateOnly
+pwsh -NoLogo -NoProfile -File .\tests\Test-Sysinfo.ps1
+pwsh -NoLogo -NoProfile -File .\tests\Test-AISandbox.ps1
+pwsh -NoLogo -NoProfile -File .\tests\Test-Backup.ps1
+pwsh -NoLogo -NoProfile -File .\tests\Test-Reorganize.ps1
+```
+
+## Tech Stack / Технологии
+
+| Layer / Слой | Technology / Технология |
+|---|---|
+| Shell | PowerShell 7.6+ |
+| Operating system | Windows 10/11; Windows 11 is the primary target |
+| Terminal | Windows Terminal or another terminal host |
+| Local AI (optional) | LM Studio with an OpenAI-compatible local API |
+| Version control (optional) | Git over HTTPS or SSH |
+| Python (optional) | Only for user-added or dependent scripts |
+
+## Roadmap / План развития
+
+See `ROADMAP.md` for planned work. The project is under active development; not every command has been exercised on every Windows configuration.
+
+Планы развития находятся в `ROADMAP.md`. Проект активно развивается; не каждая команда проверена на всех конфигурациях Windows.
+
+## License / Лицензия
+
+ARGONOV SHELL is distributed under the MIT License. See `LICENSE`.
+
+ARGONOV SHELL распространяется по лицензии MIT. Полный текст находится в файле `LICENSE`.
