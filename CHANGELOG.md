@@ -4,6 +4,9 @@ All notable project changes will be recorded here.
 
 ## Unreleased
 
+- Hardened TEMP cleanup with preview-only defaults, configurable age threshold, PowerShell `-WhatIf`/`-Confirm`, explicit link-safe traversal and isolated cleanup tests.
+
+
 - Added a safe HTTP/HTTPS `wget` command with URL validation, query-safe filenames, relative-path resolution, no-overwrite defaults, `-Force`, `-WhatIf` and temporary-file replacement after successful downloads.
 - Added mocked wget tests for URL validation, overwrite protection and failed-download preservation.
 
