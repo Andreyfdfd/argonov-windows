@@ -23,7 +23,7 @@ try {
         '# User profile header',
         '$global:BeforeArgonov = $true',
         $startMarker,
-        ". '$quotedApath\profile.ps1'",
+        ". '$quotedRepoRoot\profile.ps1'",
         $endMarker,
         '$global:AfterArgonov = $true'
     )
