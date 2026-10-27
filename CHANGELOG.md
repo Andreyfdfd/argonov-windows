@@ -4,6 +4,8 @@ All notable project changes will be recorded here.
 
 ## Unreleased
 
+- Added an optional `-ProfilePath` installer parameter and integration tests for validation-only preservation, profile preservation, backups, idempotency and malformed markers.
+
 - Added a profile-safe uninstaller with profile backup, `-WhatIf` support and fail-closed handling of malformed markers.
 - Added uninstaller safety tests for profile preservation, preview mode and malformed markers.
 
