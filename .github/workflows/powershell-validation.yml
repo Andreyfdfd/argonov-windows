@@ -57,7 +57,8 @@ jobs:
             'tests/Test-Reorganize.ps1',
             'tests/Test-ProxySettings.ps1',
             'tests/Test-Uninstall.ps1',
-            'tests/Test-Wget.ps1'
+            'tests/Test-Wget.ps1',
+            'tests/Test-Cleanup.ps1'
           )
 
           foreach ($test in $tests) {
