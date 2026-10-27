@@ -1,11 +1,68 @@
 ﻿# ARGONOV SHELL · proxy
 
-$script:PROXY_DIR  = "$HOME\.argonov-proxy"
-$script:PROXY_LIST = "$script:PROXY_DIR\list.txt"
-$script:PROXY_OK   = "$script:PROXY_DIR\working.txt"
+$script:PROXY_DIR = if ($global:ARGONOV_PROXY_DIR) {
+    [System.IO.Path]::GetFullPath($global:ARGONOV_PROXY_DIR)
+} else {
+    Join-Path $HOME '.argonov-proxy'
+}
+$script:PROXY_LIST = Join-Path $script:PROXY_DIR 'list.txt'
+$script:PROXY_OK = Join-Path $script:PROXY_DIR 'working.txt'
+$script:PROXY_REGISTRY_PATH = if ($global:ARGONOV_PROXY_REGISTRY_PATH) {
+    [string]$global:ARGONOV_PROXY_REGISTRY_PATH
+} else {
+    'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings'
+}
+$script:PROXY_STATE_FILE = if ($global:ARGONOV_PROXY_STATE_FILE) {
+    [System.IO.Path]::GetFullPath($global:ARGONOV_PROXY_STATE_FILE)
+} else {
+    Join-Path $script:PROXY_DIR 'original-settings.json'
+}
 
-if (-not (Test-Path $script:PROXY_DIR)) {
+if (-not (Test-Path -LiteralPath $script:PROXY_DIR -PathType Container)) {
     New-Item -ItemType Directory -Force -Path $script:PROXY_DIR | Out-Null
+}
+
+function Save-ProxySettingsSnapshot {
+    if (Test-Path -LiteralPath $script:PROXY_STATE_FILE -PathType Leaf) { return }
+    $properties = Get-ItemProperty -LiteralPath $script:PROXY_REGISTRY_PATH -ErrorAction Stop
+    $values = [ordered]@{}
+    foreach ($name in @('ProxyEnable', 'ProxyServer', 'ProxyOverride')) {
+        $property = $properties.PSObject.Properties[$name]
+        $propertyValue = $null
+        if ($null -ne $property) { $propertyValue = $property.Value }
+        $values[$name] = [ordered]@{
+            Exists = ($null -ne $property)
+            Value = $propertyValue
+        }
+    }
+    $snapshot = [ordered]@{
+        Version = 1
+        RegistryPath = $script:PROXY_REGISTRY_PATH
+        SavedAt = (Get-Date).ToString('o')
+        Values = $values
+    }
+    $json = ConvertTo-Json -InputObject $snapshot -Depth 6
+    $temporaryPath = "$script:PROXY_STATE_FILE.tmp"
+    [System.IO.File]::WriteAllText($temporaryPath, $json, [System.Text.UTF8Encoding]::new($false))
+    Move-Item -LiteralPath $temporaryPath -Destination $script:PROXY_STATE_FILE -Force
+}
+
+function Restore-ProxySettingsSnapshot {
+    if (-not (Test-Path -LiteralPath $script:PROXY_STATE_FILE -PathType Leaf)) { return $false }
+    $snapshot = Get-Content -LiteralPath $script:PROXY_STATE_FILE -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+    if (-not [string]::Equals([string]$snapshot.RegistryPath, [string]$script:PROXY_REGISTRY_PATH, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw 'Saved proxy settings belong to a different registry path. No settings were restored.'
+    }
+    foreach ($name in @('ProxyEnable', 'ProxyServer', 'ProxyOverride')) {
+        $entry = $snapshot.Values.PSObject.Properties[$name].Value
+        if ($entry.Exists) {
+            Set-ItemProperty -LiteralPath $script:PROXY_REGISTRY_PATH -Name $name -Value $entry.Value -ErrorAction Stop
+        } else {
+            Remove-ItemProperty -LiteralPath $script:PROXY_REGISTRY_PATH -Name $name -ErrorAction SilentlyContinue
+        }
+    }
+    Remove-Item -LiteralPath $script:PROXY_STATE_FILE -Force -ErrorAction Stop
+    return $true
 }
 
 function proxy-fetch {
@@ -161,42 +218,106 @@ function proxy-test-one {
 }
 
 function proxy-use {
-    param([Parameter(Mandatory)][int]$Index = 1)
+    [CmdletBinding()]
+    param(
+        [ValidateRange(1, 2147483647)][int]$Index = 1,
+        [switch]$Force
+    )
 
-    if (-not (Test-Path $script:PROXY_OK)) {
-        Write-Host "  No tested proxies. Run proxy-test first." -ForegroundColor Red
+    if (-not (Test-Path -LiteralPath $script:PROXY_OK -PathType Leaf)) {
+        Write-Host "  No tested proxies. Run proxy-fetch and proxy-test first." -ForegroundColor Red
         return
     }
 
-    $lines = Get-Content $script:PROXY_OK -Encoding UTF8
+    $lines = @(Get-Content -LiteralPath $script:PROXY_OK -Encoding UTF8)
     if ($Index -lt 1 -or $Index -gt $lines.Count) {
         Write-Host "  Index out of range (1..$($lines.Count))" -ForegroundColor Red
         return
     }
 
     $line = $lines[$Index - 1]
-    $proxyRaw = ($line -split " \| ")[0]
+    $proxyRaw = ($line -split ' \| ', 2)[0].Trim()
 
     if ($proxyRaw -match '^socks5://') {
-        Write-Host "  SOCKS5 не работает как системный прокси Windows." -ForegroundColor Yellow
-        Write-Host "  Используй HTTP-прокси (из списка http://)." -ForegroundColor DarkGray
+        Write-Host '  SOCKS5 не работает как системный прокси Windows.' -ForegroundColor Yellow
+        Write-Host '  Используй HTTP-прокси (из списка http://).' -ForegroundColor DarkGray
         return
     }
 
-    $addr = $proxyRaw -replace '^http://',''
-    $key = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings"
-    Set-ItemProperty -Path $key -Name ProxyEnable  -Value 1
-    Set-ItemProperty -Path $key -Name ProxyServer  -Value $addr
-    Set-ItemProperty -Path $key -Name ProxyOverride -Value "<local>"
+    if ($proxyRaw -notmatch '^http://(\d{1,3}(?:\.\d{1,3}){3}):(\d{1,5})$') {
+        Write-Host '  Invalid proxy entry. Expected http://IPv4:port.' -ForegroundColor Red
+        return
+    }
+    $ipText = $Matches[1]
+    $portText = $Matches[2]
+    $ipAddress = $null
+    $portNumber = 0
+    if (-not [System.Net.IPAddress]::TryParse($ipText, [ref]$ipAddress) -or
+        $ipAddress.AddressFamily -ne [System.Net.Sockets.AddressFamily]::InterNetwork -or
+        -not [int]::TryParse($portText, [ref]$portNumber) -or $portNumber -lt 1 -or $portNumber -gt 65535) {
+        Write-Host '  Invalid IPv4 address or port (port must be 1..65535).' -ForegroundColor Red
+        return
+    }
+    $addr = "$ipText`:$portNumber"
+
+    Write-Host '  WARNING: a public proxy is untrusted and may observe or alter traffic that is not protected by end-to-end TLS.' -ForegroundColor Yellow
+    Write-Host '  Do not use it for passwords, banking or sensitive activity.' -ForegroundColor Yellow
+    if (-not $Force) {
+        $answer = Read-Host '  Apply this proxy to Windows user settings? Type y to continue'
+        if ($answer -cne 'y') {
+            Write-Host '  Cancelled; Windows proxy settings were not changed.' -ForegroundColor DarkGray
+            return
+        }
+    }
+
+    try {
+        if (-not (Test-Path -LiteralPath $script:PROXY_REGISTRY_PATH)) {
+            throw "Proxy registry key not found: $script:PROXY_REGISTRY_PATH"
+        }
+        Save-ProxySettingsSnapshot
+        Set-ItemProperty -LiteralPath $script:PROXY_REGISTRY_PATH -Name ProxyServer -Value $addr -ErrorAction Stop
+        Set-ItemProperty -LiteralPath $script:PROXY_REGISTRY_PATH -Name ProxyOverride -Value '<local>' -ErrorAction Stop
+        Set-ItemProperty -LiteralPath $script:PROXY_REGISTRY_PATH -Name ProxyEnable -Value 1 -ErrorAction Stop
+    } catch {
+        try { Restore-ProxySettingsSnapshot | Out-Null } catch {}
+        Write-Host "  Could not apply proxy: $($_.Exception.Message)" -ForegroundColor Red
+        return
+    }
 
     Write-Host "  System proxy set to: $addr" -ForegroundColor Green
-    Write-Host "  Проверь: curl.exe https://api.ipify.org" -ForegroundColor DarkGray
+    Write-Host '  Original proxy settings saved. Run proxy-clear to restore them.' -ForegroundColor Cyan
+    Write-Host '  Проверь: curl.exe https://api.ipify.org' -ForegroundColor DarkGray
 }
 
 function proxy-clear {
-    $key = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings"
-    Set-ItemProperty -Path $key -Name ProxyEnable -Value 0
-    Write-Host "  System proxy disabled" -ForegroundColor Green
+    [CmdletBinding()]
+    param([switch]$Force)
+
+    if (Test-Path -LiteralPath $script:PROXY_STATE_FILE -PathType Leaf) {
+        try {
+            if (Restore-ProxySettingsSnapshot) {
+                Write-Host '  Original Windows proxy settings restored.' -ForegroundColor Green
+            }
+        } catch {
+            Write-Host "  Could not restore saved proxy settings: $($_.Exception.Message)" -ForegroundColor Red
+        }
+        return
+    }
+
+    Write-Host '  No saved original proxy settings were found.' -ForegroundColor Yellow
+    if (-not $Force) {
+        $answer = Read-Host '  Disable the current Windows user proxy without restoring a snapshot? Type y to continue'
+        if ($answer -cne 'y') {
+            Write-Host '  Cancelled; Windows proxy settings were not changed.' -ForegroundColor DarkGray
+            return
+        }
+    }
+    try {
+        Set-ItemProperty -LiteralPath $script:PROXY_REGISTRY_PATH -Name ProxyEnable -Value 0 -ErrorAction Stop
+        Write-Host '  Windows user proxy disabled. ProxyServer and ProxyOverride values were retained.' -ForegroundColor Green
+    } catch {
+        Write-Host "  Could not disable proxy: $($_.Exception.Message)" -ForegroundColor Red
+    }
 }
 
 function proxy-status {
