@@ -4,6 +4,9 @@ All notable project changes will be recorded here.
 
 ## Unreleased
 
+- Made system proxy changes reversible by saving/restoring prior Internet Settings values, validating proxy entries and warning before applying public proxies.
+- Added isolated proxy registry tests for invalid input, settings restoration, switching and previously absent registry values.
+
 - Added an optional `-ProfilePath` installer parameter and integration tests for validation-only preservation, profile preservation, backups, idempotency and malformed markers.
 
 - Added a profile-safe uninstaller with profile backup, `-WhatIf` support and fail-closed handling of malformed markers.
