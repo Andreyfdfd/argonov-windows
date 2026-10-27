@@ -1,96 +1,98 @@
-﻿# ARGONOV SHELL · reorganize
-# Структурирует modules/ по категориям
+# ARGONOV SHELL - reorganize module files safely
+[CmdletBinding()]
+param(
+    # Actually move files. Without this switch the script only previews changes.
+    [switch]$Execute
+)
 
-param([switch]$DryRun)
+$ErrorActionPreference = 'Stop'
+$projectRoot = [System.IO.Path]::GetFullPath($PSScriptRoot)
+$moduleRoot = Join-Path $projectRoot 'modules'
 
-$ErrorActionPreference = "Continue"
-$ArgRoot = "C:\ARGONOV"
-$ModRoot = Join-Path $ArgRoot "modules"
-
-if (-not (Test-Path $ModRoot)) {
-    Write-Host "  Папка modules не найдена: $ModRoot" -ForegroundColor Red
+if (-not (Test-Path -LiteralPath $moduleRoot -PathType Container)) {
+    Write-Error "Modules folder was not found: $moduleRoot"
     exit 1
 }
 
 $mapping = [ordered]@{
-    "completion.ps1"  = "core"
-    "commands.ps1"    = "core"
-    "info.ps1"        = "core"
-    "prompt.ps1"      = "core"
-    "sysinfo.ps1"     = "system"
-    "dashboard.ps1"   = "system"
-    "processes.ps1"   = "system"
-    "admin.ps1"       = "system"
-    "autostart.ps1"   = "system"
-    "security.ps1"    = "system"
-    "navigation.ps1"  = "system"
-    "network.ps1"     = "network"
-    "proxy.ps1"       = "network"
-    "ai.ps1"          = "ai"
-    "lmstudio.ps1"    = "ai"
-    "backup.ps1"      = "tools"
-    "cad.ps1"         = "tools"
-    "screenshot.ps1"  = "tools"
-    "git-aliases.ps1" = "dev"
-    "hacktool.ps1"    = "osint"
-    "matrix.ps1"      = "fun"
+    'completion.ps1'  = 'core'
+    'commands.ps1'    = 'core'
+    'info.ps1'        = 'core'
+    'prompt.ps1'      = 'core'
+    'banner.ps1'      = 'core'
+    'sysinfo.ps1'     = 'system'
+    'dashboard.ps1'   = 'system'
+    'processes.ps1'   = 'system'
+    'admin.ps1'       = 'system'
+    'autostart.ps1'   = 'system'
+    'security.ps1'    = 'system'
+    'navigation.ps1'  = 'system'
+    'network.ps1'     = 'network'
+    'proxy.ps1'       = 'network'
+    'ai.ps1'          = 'ai'
+    'lmstudio.ps1'    = 'ai'
+    'backup.ps1'      = 'tools'
+    'cad.ps1'         = 'tools'
+    'screenshot.ps1'  = 'tools'
+    'git-aliases.ps1' = 'dev'
+    'hacktool.ps1'    = 'osint'
+    'matrix.ps1'      = 'fun'
 }
 
-Write-Host ""
-Write-Host "  ==============================================" -ForegroundColor DarkCyan
-Write-Host "   РЕСТРУКТУРИЗАЦИЯ MODULES" -ForegroundColor Cyan
-Write-Host "  ==============================================" -ForegroundColor DarkCyan
-Write-Host ""
+$planned = [System.Collections.Generic.List[object]]::new()
+$conflicts = [System.Collections.Generic.List[string]]::new()
+$missing = [System.Collections.Generic.List[string]]::new()
 
-if ($DryRun) {
-    Write-Host "  DRY RUN — ничего не будет изменено" -ForegroundColor Yellow
-    Write-Host ""
+Write-Host ''
+Write-Host '  ==============================================' -ForegroundColor DarkCyan
+Write-Host '   ARGONOV SHELL - module reorganization' -ForegroundColor Cyan
+Write-Host '  ==============================================' -ForegroundColor DarkCyan
+Write-Host "  Project root: $projectRoot" -ForegroundColor DarkGray
+if (-not $Execute) {
+    Write-Host '  PREVIEW ONLY - no files will be moved.' -ForegroundColor Yellow
+    Write-Host '  Add -Execute to apply the listed moves.' -ForegroundColor Yellow
 }
+Write-Host ''
 
-foreach ($cat in ($mapping.Values | Select-Object -Unique)) {
-    $catPath = Join-Path $ModRoot $cat
-    if (-not (Test-Path $catPath)) {
-        if (-not $DryRun) {
-            New-Item -ItemType Directory -Force -Path $catPath | Out-Null
+foreach ($fileName in $mapping.Keys) {
+    $source = Join-Path $moduleRoot $fileName
+    $destinationDirectory = Join-Path $moduleRoot $mapping[$fileName]
+    $destination = Join-Path $destinationDirectory $fileName
+
+    if (Test-Path -LiteralPath $source -PathType Leaf) {
+        if (Test-Path -LiteralPath $destination) {
+            $conflicts.Add("$fileName exists both at modules\ and modules\$($mapping[$fileName])\")
+            Write-Host "  [CONFLICT] $fileName - target already exists; neither file will be overwritten" -ForegroundColor Yellow
+            continue
         }
-    }
-}
-
-$moved = 0
-$skipped = 0
-$missing = 0
-
-foreach ($file in $mapping.Keys) {
-    $category = $mapping[$file]
-    $sourcePath = Join-Path $ModRoot $file
-    $targetDir = Join-Path $ModRoot $category
-    $targetPath = Join-Path $targetDir $file
-
-    if (Test-Path $sourcePath) {
-        if (-not $DryRun) {
-            Move-Item $sourcePath $targetPath -Force
-        }
-        Write-Host "  [OK]   $file  ->  modules\$category\" -ForegroundColor Green
-        $moved++
-    } elseif (Test-Path $targetPath) {
-        Write-Host "  [skip] $file  (уже в modules\$category\)" -ForegroundColor DarkGray
-        $skipped++
+        $planned.Add([pscustomobject]@{ Source = $source; Destination = $destination; Name = $fileName; Category = $mapping[$fileName] })
+        Write-Host "  [MOVE] modules\$fileName -> modules\$($mapping[$fileName])\$fileName" -ForegroundColor Cyan
+    } elseif (Test-Path -LiteralPath $destination -PathType Leaf) {
+        Write-Host "  [OK]   $fileName is already categorized" -ForegroundColor Green
     } else {
-        Write-Host "  [WARN] $file  (не найден)" -ForegroundColor Yellow
-        $missing++
+        $missing.Add($fileName)
+        Write-Host "  [SKIP] $fileName was not found" -ForegroundColor DarkGray
     }
 }
 
-Write-Host ""
-Write-Host "  ----------------------------------------" -ForegroundColor DarkCyan
-Write-Host "  Перемещено:  $moved" -ForegroundColor Green
-Write-Host "  На месте:    $skipped" -ForegroundColor Gray
-Write-Host "  Не найдено:  $missing" -ForegroundColor Yellow
-Write-Host ""
-
-if ($DryRun) {
-    Write-Host "  DRY RUN завершён." -ForegroundColor Yellow
+if ($Execute -and $planned.Count -gt 0) {
+    foreach ($move in $planned) {
+        $destinationDirectory = Split-Path -Parent $move.Destination
+        if (-not (Test-Path -LiteralPath $destinationDirectory -PathType Container)) {
+            New-Item -ItemType Directory -Path $destinationDirectory -Force -ErrorAction Stop | Out-Null
+        }
+        Move-Item -LiteralPath $move.Source -Destination $move.Destination -ErrorAction Stop
+    }
+    Write-Host ''
+    Write-Host "  Moved $($planned.Count) file(s)." -ForegroundColor Green
 } else {
-    Write-Host "  Структура готова!" -ForegroundColor Green
+    Write-Host ''
+    Write-Host "  Planned moves: $($planned.Count)" -ForegroundColor Cyan
 }
-Write-Host ""
+if ($conflicts.Count -gt 0) {
+    Write-Host "  Conflicts: $($conflicts.Count) (review manually; files were not overwritten)" -ForegroundColor Yellow
+}
+if ($missing.Count -gt 0) {
+    Write-Host "  Unmapped source files missing: $($missing.Count)" -ForegroundColor DarkGray
+}
+Write-Host ''
