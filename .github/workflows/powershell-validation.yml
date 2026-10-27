@@ -2,48 +2,70 @@ name: PowerShell validation
 
 on:
   push:
-    branches: [main, 'feature/**']
+    branches:
+      - main
+      - 'feature/**'
+      - 'release/**'
   pull_request:
 
 permissions:
   contents: read
 
 jobs:
-  sysinfo-validation:
+  validate:
     runs-on: windows-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Parse changed PowerShell entry points
+      - name: Parse every PowerShell script
         shell: pwsh
         run: |
-          $files = @(
-            'modules/system/sysinfo.ps1',
-            'modules/core/commands.ps1',
-            'modules/core/info.ps1',
-            'modules/ai/ai.ps1',
-            'tests/Test-Sysinfo.ps1'
-          )
+          $ErrorActionPreference = 'Stop'
+          $files = @(Get-ChildItem -Path . -Filter '*.ps1' -File -Recurse | Sort-Object FullName)
+
+          if ($files.Count -eq 0) {
+            throw 'No PowerShell scripts were found.'
+          }
+
           $failures = [System.Collections.Generic.List[string]]::new()
           foreach ($file in $files) {
-            if (-not (Test-Path -LiteralPath $file)) {
-              $failures.Add("Missing file: $file") | Out-Null
-              continue
-            }
             $tokens = $null
             $errors = $null
-            [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $file), [ref]$tokens, [ref]$errors) | Out-Null
+            [System.Management.Automation.Language.Parser]::ParseFile($file.FullName, [ref]$tokens, [ref]$errors) | Out-Null
             foreach ($errorItem in $errors) {
-              $failures.Add("${file}:$($errorItem.Extent.StartLineNumber): $($errorItem.Message)") | Out-Null
+              $relativePath = [System.IO.Path]::GetRelativePath((Get-Location).Path, $file.FullName)
+              $failures.Add("$($relativePath):$($errorItem.Extent.StartLineNumber): $($errorItem.Message)") | Out-Null
             }
           }
+
           if ($failures.Count -gt 0) {
             $failures | ForEach-Object { Write-Error $_ }
-            throw 'PowerShell parser validation failed.'
+            throw "PowerShell parser validation failed with $($failures.Count) error(s)."
           }
-          Write-Host 'PowerShell parser validation passed.' -ForegroundColor Green
+          Write-Host "PowerShell parser validation passed for $($files.Count) script(s)." -ForegroundColor Green
 
-      - name: Run sysinfo integration smoke test
+      - name: Run smoke-test suite
         shell: pwsh
-        run: ./tests/Test-Sysinfo.ps1
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $tests = @(
+            'tests/Test-Sysinfo.ps1',
+            'tests/Test-AISandbox.ps1',
+            'tests/Test-Backup.ps1',
+            'tests/Test-Reorganize.ps1'
+          )
+
+          foreach ($test in $tests) {
+            if (-not (Test-Path -LiteralPath $test -PathType Leaf)) {
+              throw "Missing test script: $test"
+            }
+
+            Write-Host ([Environment]::NewLine + "=== $test ===") -ForegroundColor Cyan
+            & pwsh -NoLogo -NoProfile -File $test
+            if ($LASTEXITCODE -ne 0) {
+              throw "Test failed: $test (exit code $LASTEXITCODE)"
+            }
+          }
+
+          Write-Host 'All smoke tests passed.' -ForegroundColor Green
