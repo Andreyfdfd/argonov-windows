@@ -5,7 +5,10 @@ param(
     [switch]$Force,
 
     # Validate scripts without editing the PowerShell profile.
-    [switch]$ValidateOnly
+    [switch]$ValidateOnly,
+
+    # Target profile path (defaults to the current PowerShell profile; useful for tests).
+    [string]$ProfilePath = $PROFILE
 )
 
 $ErrorActionPreference = 'Stop'
@@ -35,7 +38,7 @@ if ($PSVersionTable.PSVersion -lt [version]'7.6') {
 
 $sourceRoot = [System.IO.Path]::GetFullPath($PSScriptRoot)
 $moduleRoot = Join-Path -Path $sourceRoot -ChildPath 'modules'
-$profilePath = $PROFILE
+$profilePath = $ProfilePath
 $profileScript = Join-Path -Path $sourceRoot -ChildPath 'profile.ps1'
 $startMarker = '# >>> ARGONOV SHELL (managed by install.ps1) >>>'
 $endMarker = '# <<< ARGONOV SHELL (managed by install.ps1) <<<'
@@ -113,10 +116,11 @@ if (Test-Path -LiteralPath (Join-Path $HOME '.lmstudio\bin\lms.exe') -PathType L
 }
 
 Write-Step 'PowerShell profile'
-if (-not $profilePath) {
+if ([string]::IsNullOrWhiteSpace($profilePath)) {
     Write-Err 'PowerShell did not provide a profile path for the current host.'
     exit 1
 }
+$profilePath = [System.IO.Path]::GetFullPath($profilePath)
 
 $profileDirectory = Split-Path -Parent $profilePath
 if (-not (Test-Path -LiteralPath $profileDirectory -PathType Container)) {
