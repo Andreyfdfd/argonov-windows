@@ -1,1 +1,38 @@
+# Local installation state
+.installed
+
+# PowerShell logs, temporary files and backups
+*.log
+PowerShell_transcript*.txt
+*.tmp
+*.temp
+*.swp
+*.bak
+*.bak.*
+*.old
+*.orig
 modules/system/sysinfo.ps1.pre-*.bak
+
+# Local environment and credentials
+.env
+.env.*
+!.env.example
+*.secret
+*.credentials
+*.pem
+*.p12
+*.pfx
+*.key
+id_rsa
+id_ed25519
+id_ecdsa
+
+# Python-generated files (optional integrations/tests)
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Operating-system noise
+.DS_Store
+Thumbs.db
