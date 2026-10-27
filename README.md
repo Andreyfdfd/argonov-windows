@@ -120,6 +120,19 @@ pwsh -NoLogo -NoProfile -File .\install.ps1 -ValidateOnly
 pwsh -NoLogo -NoProfile -File .\install.ps1
 §§§
 
+### Uninstallation / Удаление
+
+Run this from the project directory in PowerShell 7.6+ to remove ARGONOV's managed entry from the current PowerShell profile:
+
+```powershell
+pwsh -NoLogo -NoProfile -File .\uninstall.ps1 -WhatIf
+pwsh -NoLogo -NoProfile -File .\uninstall.ps1
+```
+
+Use `-WhatIf` first to preview the change. During a normal run, the uninstaller creates a timestamped profile backup before removing the marked ARGONOV block. It preserves the rest of the profile and leaves project files, backups and user data in place. The optional `-ProfilePath` parameter is intended for tests or a specific profile file.
+
+Запускай из каталога проекта в PowerShell 7.6+. Сначала проверь действие через `-WhatIf`. При обычном запуске деинсталлятор сохраняет резервную копию профиля с меткой времени, а затем удаляет только маркированный блок ARGONOV. Остальное содержимое профиля сохраняется; файлы проекта, резервные копии и пользовательские данные не удаляются. Параметр `-ProfilePath` предназначен для тестов или работы с конкретным файлом профиля.
+
 ### Troubleshooting / Если запуск скриптов заблокирован
 
 The installer intentionally does not weaken your execution policy. If PowerShell blocks a script, first review your organisation's policy and the downloaded source. Only if you trust the source and control the device, you may choose to allow locally created scripts for your user:
@@ -408,6 +421,7 @@ argonov-windows/
 ├── profile.ps1
 ├── install.ps1
 ├── reorganize.ps1
+├── uninstall.ps1
 ├── README.md
 ├── ROADMAP.md
 ├── CHANGELOG.md
@@ -419,7 +433,8 @@ argonov-windows/
 │   ├── Test-Sysinfo.ps1
 │   ├── Test-AISandbox.ps1
 │   ├── Test-Backup.ps1
-│   └── Test-Reorganize.ps1
+│   ├── Test-Reorganize.ps1
+│   └── Test-Uninstall.ps1
 └── modules/
     ├── ai/
     ├── core/
@@ -458,6 +473,7 @@ pwsh -NoLogo -NoProfile -File .\tests\Test-Sysinfo.ps1
 pwsh -NoLogo -NoProfile -File .\tests\Test-AISandbox.ps1
 pwsh -NoLogo -NoProfile -File .\tests\Test-Backup.ps1
 pwsh -NoLogo -NoProfile -File .\tests\Test-Reorganize.ps1
+pwsh -NoLogo -NoProfile -File .\tests\Test-Uninstall.ps1
 ```
 
 ## Tech Stack / Технологии
