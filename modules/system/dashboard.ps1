@@ -1,4 +1,4 @@
-﻿# ARGONOV SHELL · dashboard v2
+# ARGONOV SHELL · dashboard v2
 
 function dash {
     Clear-Host
@@ -158,16 +158,37 @@ function dash {
     # ═══ ARGONOV SHELL ═══
     Write-Host "  ▬ ARGONOV SHELL" -ForegroundColor Magenta
 
-    if (Test-Path "C:\ARGONOV\.git") {
-        Push-Location "C:\ARGONOV"
-        $branch = & git symbolic-ref --short HEAD 2>$null
-        $status = & git status --porcelain 2>$null
-        $dirty = ($status -ne $null -and $status.Length -gt 0)
-        $lastCommit = & git log -1 --pretty=format:"%h %s" 2>$null
-        $commitCount = (& git rev-list --count HEAD 2>$null)
-        Pop-Location
+    $argonovRoot = if ($global:ARGONOV_ROOT) {
+        [System.IO.Path]::GetFullPath($global:ARGONOV_ROOT)
+    } else {
+        [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
+    }
+    $gitMetadata = Join-Path $argonovRoot '.git'
 
-        Write-Host "    📁 C:\ARGONOV  [" -NoNewline
+    if (Test-Path -LiteralPath $gitMetadata) {
+        $branch = '?'
+        $dirty = $false
+        $lastCommit = $null
+        $commitCount = '?'
+        $locationPushed = $false
+        try {
+            Push-Location -LiteralPath $argonovRoot
+            $locationPushed = $true
+            $branchResult = & git symbolic-ref --short HEAD 2>$null
+            if (-not $branchResult) { $branchResult = & git rev-parse --short HEAD 2>$null }
+            if ($branchResult) { $branch = ($branchResult | Select-Object -First 1).ToString() }
+            $status = @(& git status --porcelain 2>$null)
+            $dirty = ($status.Count -gt 0)
+            $lastCommit = & git log -1 --pretty=format:"%h %s" 2>$null
+            $countResult = & git rev-list --count HEAD 2>$null
+            if ($countResult) { $commitCount = ($countResult | Select-Object -First 1).ToString() }
+        } catch {
+            Write-Host "    Git status unavailable: $($_.Exception.Message)" -ForegroundColor DarkGray
+        } finally {
+            if ($locationPushed) { Pop-Location }
+        }
+
+        Write-Host "    📁 $argonovRoot  [" -NoNewline
         if ($dirty) {
             Write-Host "$branch*" -NoNewline -ForegroundColor Yellow
         } else {
@@ -180,7 +201,7 @@ function dash {
             Write-Host "    └─ $lastCommit" -ForegroundColor Gray
         }
     } else {
-        Write-Host "    📁 C:\ARGONOV: не git-репозиторий" -ForegroundColor Red
+        Write-Host "    📁 $($argonovRoot): не git-репозиторий" -ForegroundColor Red
     }
     Write-Host ""
 
