@@ -1,18 +1,30 @@
-﻿# ARGONOV SHELL · banner
+# ARGONOV SHELL · banner
 
 function Show-ArgonovBanner {
     $gitBranch = ""
     $gitClean  = $true
     $commitCount = 0
-    if (Test-Path "C:\ARGONOV\.git") {
+    $repoRoot = if ($global:ARGONOV_ROOT) {
+        [System.IO.Path]::GetFullPath($global:ARGONOV_ROOT)
+    } else {
+        [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
+    }
+
+    if (Test-Path -LiteralPath (Join-Path $repoRoot '.git')) {
+        $locationPushed = $false
         try {
-            Push-Location "C:\ARGONOV"
+            Push-Location -LiteralPath $repoRoot
+            $locationPushed = $true
             $gitBranch = & git symbolic-ref --short HEAD 2>$null
+            if (-not $gitBranch) { $gitBranch = & git rev-parse --short HEAD 2>$null }
             $status = & git status --porcelain 2>$null
-            $gitClean = ($status -eq $null -or $status.Length -eq 0)
+            $gitClean = ($status -eq $null -or $status.Count -eq 0)
             $commitCount = & git rev-list --count HEAD 2>$null
-            Pop-Location
-        } catch { Pop-Location }
+        } catch {
+            # Git is optional; the banner should still render without it.
+        } finally {
+            if ($locationPushed) { Pop-Location }
+        }
     }
 
     $now = Get-Date
