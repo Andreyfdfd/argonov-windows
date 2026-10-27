@@ -52,13 +52,17 @@ foreach ($entry in @('sysinfo','sysinfo live','sysinfo live -Log','sysinfo deep'
 
 Write-Host 'PASS: PowerShell syntax parsed successfully.' -ForegroundColor Green
 Write-Host 'PASS: sysinfo entry points are defined.' -ForegroundColor Green
-$aiPromptText = Get-Content -LiteralPath $aiPath -Raw
-$expectedAiExec = "        '. ''C:\ARGONOV\modules\system\sysinfo.ps1''; sysinfo',"
-if (-not $aiPromptText.Contains($expectedAiExec)) {
-    Write-Host 'FAIL: AI exec must load sysinfo under pwsh -NoProfile.' -ForegroundColor Red
+# Exercise the AI prompt generator so it remains correct when the repository is installed outside C:\ARGONOV.
+. $aiPath
+$expectedSysinfoPath = [System.IO.Path]::GetFullPath((Join-Path $repoRoot 'modules\system\sysinfo.ps1'))
+$expectedSysinfoQuoted = $expectedSysinfoPath.Replace("'", "''")
+$expectedAiExec = ". '$expectedSysinfoQuoted'; sysinfo"
+$generatedAiPrompt = ai-system-prompt
+if (-not $generatedAiPrompt.Contains($expectedAiExec)) {
+    Write-Host ("FAIL: AI exec must use the current repository path. Expected: {0}" -f $expectedAiExec) -ForegroundColor Red
     exit 1
 }
-Write-Host 'PASS: AI exec loads sysinfo module in isolated -NoProfile PowerShell.' -ForegroundColor Green
+Write-Host 'PASS: AI exec uses the repository-relative sysinfo path.' -ForegroundColor Green
 
 
 # Unit-check the searchable diagnostic-code contracts without reading Windows event logs.
