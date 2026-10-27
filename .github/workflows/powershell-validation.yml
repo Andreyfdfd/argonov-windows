@@ -53,6 +53,7 @@ jobs:
             'tests/Test-Sysinfo.ps1',
             'tests/Test-AISandbox.ps1',
             'tests/Test-Backup.ps1',
+            'tests/Test-Install.ps1',
             'tests/Test-Reorganize.ps1',
             'tests/Test-Uninstall.ps1'
           )
