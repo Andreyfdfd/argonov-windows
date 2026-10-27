@@ -4,6 +4,9 @@ All notable project changes will be recorded here.
 
 ## Unreleased
 
+- Added a profile-safe uninstaller with profile backup, `-WhatIf` support and fail-closed handling of malformed markers.
+- Added uninstaller safety tests for profile preservation, preview mode and malformed markers.
+
 - Made profile module loading relative to the project directory.
 - Made the installer validate PowerShell syntax before modifying the profile.
 - Added a validation-only installer mode and idempotent, marked profile integration.
