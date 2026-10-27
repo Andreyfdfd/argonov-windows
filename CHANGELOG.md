@@ -4,6 +4,10 @@ All notable project changes will be recorded here.
 
 ## Unreleased
 
+- Added a safe HTTP/HTTPS `wget` command with URL validation, query-safe filenames, relative-path resolution, no-overwrite defaults, `-Force`, `-WhatIf` and temporary-file replacement after successful downloads.
+- Added mocked wget tests for URL validation, overwrite protection and failed-download preservation.
+
+
 - Made system proxy changes reversible by saving/restoring prior Internet Settings values, validating proxy entries and warning before applying public proxies.
 - Added isolated proxy registry tests for invalid input, settings restoration, switching and previously absent registry values.
 
