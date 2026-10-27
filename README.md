@@ -58,7 +58,7 @@
 | **💾 Backups** / Бэкапы | ZIP archives of the shell / ZIP-архивы оболочки |
 | **📐 CAD launcher** / CAD-лончер | SolidWorks, AutoCAD, KOMPAS, Mastercam / SolidWorks, AutoCAD, КОМПАС, Mastercam |
 | **🎮 Fun** / Развлечения | Matrix rain, CJK charset / Матрица, CJK-набор |
-| **🔒 Sandbox** | AI restricted to safe folders / AI ограничен безопасными папками |
+| **🔒 AI path allowlist** | Application-level path checks; not OS isolation / Проверка путей на уровне приложения, не изоляция ОС |
 | **🌍 Bilingual** / Двуязычность | All commands documented in EN + RU / Все команды на EN + RU |
 
 ---
@@ -343,9 +343,9 @@ Detailed diagnostics, data-source limits and privacy notes: [SYSINFO guide](docs
 
 **RU:** AI-агент умеет выполнять действия через специальные блоки.
 
-**Write file / Создать или изменить файл** — `write`:
+### Supported action blocks / Поддерживаемые блоки действий
 
-The AI agent supports these tagged actions:
+The shell recognises the following action tags:
 
 | Block / Блок | Purpose / Назначение |
 |---|---|
