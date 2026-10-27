@@ -53,46 +53,123 @@ function startup {
 }
 
 function cleanup {
-    param([switch]$Execute)
-    $paths = @("$env:TEMP")
-    $totalBytes = 0
-    foreach ($p in $paths) {
-        if (Test-Path $p) {
-            try {
-                $files = Get-ChildItem $p -Recurse -File -ErrorAction SilentlyContinue
-                $size = ($files | Measure-Object -Property Length -Sum).Sum
-                if (-not $size) { $size = 0 }
-                $totalBytes += $size
-                $sz = if ($size -ge 1MB) { "$([math]::Round($size / 1MB, 1)) MB" } else { "$([math]::Round($size / 1KB, 1)) KB" }
-                Write-Host "  $p  ($sz)" -ForegroundColor Gray
-            } catch {}
+    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'High')]
+    param(
+        [switch]$Execute,
+        [ValidateRange(1, 3650)][int]$OlderThanDays = 1
+    )
+
+    $rawTempPath = $env:TEMP
+    if ([string]::IsNullOrWhiteSpace($rawTempPath)) {
+        Write-Host '  Error: TEMP environment variable is empty.' -ForegroundColor Red
+        return
+    }
+
+    try {
+        $root = [System.IO.Path]::GetFullPath($rawTempPath)
+    } catch {
+        Write-Host "  Error: invalid TEMP path: $($_.Exception.Message)" -ForegroundColor Red
+        return
+    }
+    if (-not (Test-Path -LiteralPath $root -PathType Container)) {
+        Write-Host "  Error: TEMP directory does not exist: $root" -ForegroundColor Red
+        return
+    }
+
+    try {
+        $rootItem = Get-Item -LiteralPath $root -Force -ErrorAction Stop
+    } catch {
+        Write-Host "  Error: cannot inspect TEMP directory: $($_.Exception.Message)" -ForegroundColor Red
+        return
+    }
+    if (($rootItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {
+        Write-Host '  Error: TEMP itself is a reparse point; refusing recursive cleanup.' -ForegroundColor Red
+        return
+    }
+
+    $cutoff = (Get-Date).AddDays(-$OlderThanDays)
+    $candidates = [System.Collections.Generic.List[System.IO.FileInfo]]::new()
+    $pendingDirectories = [System.Collections.Generic.Stack[string]]::new()
+    $pendingDirectories.Push($root)
+
+    # Traverse explicitly instead of using a blind recursive delete. Never follow links/junctions.
+    while ($pendingDirectories.Count -gt 0) {
+        $directory = $pendingDirectories.Pop()
+        try {
+            $children = @(Get-ChildItem -LiteralPath $directory -ErrorAction Stop)
+        } catch {
+            Write-Warning "Skipping inaccessible directory '$directory': $($_.Exception.Message)"
+            continue
+        }
+
+        foreach ($item in $children) {
+            if (($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {
+                Write-Host "  Skipping linked item: $($item.FullName)" -ForegroundColor DarkGray
+                continue
+            }
+            if ($item.PSIsContainer) {
+                $pendingDirectories.Push($item.FullName)
+                continue
+            }
+            if ($item -is [System.IO.FileInfo] -and $item.LastWriteTime -lt $cutoff) {
+                $candidates.Add($item)
+            }
         }
     }
-    $total = if ($totalBytes -ge 1MB) { "$([math]::Round($totalBytes / 1MB, 1)) MB" } else { "$([math]::Round($totalBytes / 1KB, 1)) KB" }
-    Write-Host ""
-    Write-Host "  Total: $total" -ForegroundColor Cyan
+
+    $totalBytes = 0L
+    foreach ($file in $candidates) { $totalBytes += $file.Length }
+    $size = if ($totalBytes -ge 1MB) {
+        "$([math]::Round($totalBytes / 1MB, 1)) MB"
+    } else {
+        "$([math]::Round($totalBytes / 1KB, 1)) KB"
+    }
+
+    Write-Host "  TEMP: $root" -ForegroundColor Gray
+    Write-Host "  Age threshold: older than $OlderThanDays day(s) (before $($cutoff.ToString('yyyy-MM-dd HH:mm:ss')))" -ForegroundColor Gray
+    Write-Host "  Eligible files: $($candidates.Count)  ($size)" -ForegroundColor Cyan
 
     if (-not $Execute) {
-        Write-Host "  (preview only, use cleanup -Execute to delete)" -ForegroundColor DarkGray
+        Write-Host '  Preview only. Use cleanup -Execute to request deletion.' -ForegroundColor DarkGray
+        return
+    }
+    if ($candidates.Count -eq 0) {
+        Write-Host '  Nothing to delete.' -ForegroundColor DarkGray
         return
     }
 
-    Write-Host ""
-    $a = Read-Host "  Delete? (y/N)"
-    if ($a -ne "y") {
-        Write-Host "  Cancelled" -ForegroundColor DarkGray
+    if (-not $PSCmdlet.ShouldProcess($root, "Delete $($candidates.Count) file(s) older than $OlderThanDays day(s)")) {
         return
     }
-    foreach ($p in $paths) {
-        if (Test-Path $p) {
-            try {
-                Get-ChildItem $p -Recurse -File -ErrorAction SilentlyContinue |
-                    Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-1) } |
-                    Remove-Item -Force -ErrorAction SilentlyContinue
-            } catch {}
+
+    $rootPrefix = $root.TrimEnd([char[]]@('\', '/')) + [System.IO.Path]::DirectorySeparatorChar
+    $deleted = 0
+    $failed = 0
+    foreach ($file in $candidates) {
+        try {
+            $candidateFull = [System.IO.Path]::GetFullPath($file.FullName)
+            if (-not $candidateFull.StartsWith($rootPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+                Write-Warning "Refusing path outside TEMP: $candidateFull"
+                $failed++
+                continue
+            }
+            if (-not (Test-Path -LiteralPath $candidateFull -PathType Leaf)) { continue }
+            $current = Get-Item -LiteralPath $candidateFull -Force -ErrorAction Stop
+            if (($current.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) { continue }
+            if ($current.LastWriteTime -ge $cutoff) { continue }
+            Remove-Item -LiteralPath $candidateFull -Force -ErrorAction Stop
+            $deleted++
+        } catch {
+            $failed++
+            Write-Warning "Could not delete '$($file.FullName)': $($_.Exception.Message)"
         }
     }
-    Write-Host "  Done" -ForegroundColor Green
+
+    Write-Host "  Deleted: $deleted file(s)." -ForegroundColor Green
+    if ($failed -gt 0) {
+        Write-Host "  Failed or skipped: $failed file(s)." -ForegroundColor Yellow
+    }
+    Write-Host '  Directories and linked items were not deleted.' -ForegroundColor DarkGray
 }
 
 function uptime {
