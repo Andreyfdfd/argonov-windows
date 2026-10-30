@@ -164,7 +164,9 @@ jobs:
           $pythonExe = Join-Path $dependenciesRoot 'Python314\python.exe'
           $terminalExe = Join-Path $dependenciesRoot 'WindowsTerminal\WindowsTerminal.exe'
           $terminalCli = Join-Path $dependenciesRoot 'WindowsTerminal\wt.exe'
-          if (-not (Test-Path -LiteralPath $gitExe -PathType Leaf)) { throw 'Isolated Git dependency was not installed.' }
+          if (-not (Test-Path -LiteralPath $gitExe -PathType Leaf)) { throw 'Isolated PortableGit dependency was not installed.' }
+          $sshExe = Join-Path $dependenciesRoot 'Git\usr\bin\ssh.exe'
+          if (-not (Test-Path -LiteralPath $sshExe -PathType Leaf)) { throw 'PortableGit OpenSSH client was not installed.' }
           if (-not (Test-Path -LiteralPath $pythonExe -PathType Leaf)) { throw 'Isolated Python 3.14 dependency was not installed.' }
           if (-not (Test-Path -LiteralPath $terminalExe -PathType Leaf)) { throw 'Portable Windows Terminal dependency was not installed.' }
           if (-not (Test-Path -LiteralPath $terminalCli -PathType Leaf)) { throw 'Windows Terminal wt.exe command was not installed.' }
@@ -188,7 +190,8 @@ jobs:
           if (-not (Test-Path -LiteralPath $keepFile -PathType Leaf)) { throw 'User data was removed by uninstaller.' }
           if (-not (Test-Path -LiteralPath $pwsh -PathType Leaf)) { throw 'Shared PowerShell runtime was removed during shell uninstall.' }
           if (-not (Test-Path -LiteralPath (Join-Path $env:DOTNET_ROOT 'host\fxr') -PathType Container)) { throw 'Shared .NET runtime was removed during shell uninstall.' }
-          if (-not (Test-Path -LiteralPath $gitExe -PathType Leaf)) { throw 'Shared Git dependency was removed during shell uninstall.' }
+          if (-not (Test-Path -LiteralPath $gitExe -PathType Leaf)) { throw 'Shared PortableGit dependency was removed during shell uninstall.' }
+          if (-not (Test-Path -LiteralPath $sshExe -PathType Leaf)) { throw 'Shared PortableGit OpenSSH client was removed during shell uninstall.' }
           if (-not (Test-Path -LiteralPath $pythonExe -PathType Leaf)) { throw 'Shared Python dependency was removed during shell uninstall.' }
           if (-not (Test-Path -LiteralPath $terminalExe -PathType Leaf)) { throw 'Shared Windows Terminal dependency was removed during shell uninstall.' }
           if (-not (Test-Path -LiteralPath $terminalCli -PathType Leaf)) { throw 'Shared Windows Terminal wt.exe was removed during shell uninstall.' }
