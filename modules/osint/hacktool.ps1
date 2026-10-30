@@ -89,19 +89,113 @@ function scan-dns {
     Write-Host ""
 }
 
-# ─── WHOIS ───
+# ─── WHOIS / RDAP ───
 function scan-whois {
     param([Parameter(Mandatory)][string]$Domain)
-    if (-not (Get-Command whois -ErrorAction SilentlyContinue)) {
-        Write-Host "  whois не установлен" -ForegroundColor Red
+
+    $inputDomain = $Domain.Trim().TrimEnd('.')
+    if ([string]::IsNullOrWhiteSpace($inputDomain)) {
+        Write-Host "  Укажи доменное имя: scan-whois example.com" -ForegroundColor Yellow
         return
     }
-    Write-Host ""
-    Write-Host "  WHOIS для ${Domain}:" -ForegroundColor Yellow
-    Write-Host "  -----------------------------------------" -ForegroundColor DarkCyan
-    & whois $Domain 2>&1 | Select-String -Pattern "Registrar:|Creation Date:|Registry Expiry|Name Server:|Registrant" | Select-Object -First 20 | ForEach-Object {
-        Write-Host "  $_" -ForegroundColor Gray
+
+    try {
+        $idn = [System.Globalization.IdnMapping]::new()
+        $queryDomain = $idn.GetAscii($inputDomain).ToLowerInvariant()
+    } catch {
+        Write-Host "  Некорректное доменное имя: $inputDomain" -ForegroundColor Red
+        return
     }
+
+    if ([uri]::CheckHostName($queryDomain) -ne [System.UriHostNameType]::Dns -or $queryDomain -notmatch '\.') {
+        Write-Host "  Некорректное доменное имя: $inputDomain" -ForegroundColor Red
+        return
+    }
+
+    Write-Host ""
+    Write-Host "  WHOIS / RDAP для $queryDomain:" -ForegroundColor Yellow
+    Write-Host "  -----------------------------------------" -ForegroundColor DarkCyan
+
+    # Keep support for a classic WHOIS client when the user already has one.
+    $whoisCommand = Get-Command whois.exe -CommandType Application -ErrorAction SilentlyContinue |
+        Select-Object -First 1
+    if ($whoisCommand) {
+        $whoisOutput = @(& $whoisCommand.Source $queryDomain 2>&1)
+        $filteredOutput = @($whoisOutput | Select-String -Pattern 'Registrar:|Creation Date:|Registry Expiry|Name Server:|Registrant|Domain Status')
+        if ($filteredOutput.Count -gt 0) {
+            $filteredOutput | Select-Object -First 24 | ForEach-Object {
+                Write-Host "  $_" -ForegroundColor Gray
+            }
+        } else {
+            $whoisOutput | Select-Object -First 16 | ForEach-Object {
+                Write-Host "  $_" -ForegroundColor Gray
+            }
+        }
+        Write-Host ""
+        return
+    }
+
+    # RDAP is the standardized, machine-readable successor to WHOIS.
+    # rdap.org redirects the query to the authoritative registry service.
+    try {
+        $rdapUrl = 'https://rdap.org/domain/' + [uri]::EscapeDataString($queryDomain)
+        $rdap = Invoke-RestMethod -Uri $rdapUrl -Headers @{
+            Accept = 'application/rdap+json, application/json'
+            'User-Agent' = 'ARGONOV-SHELL/1.0'
+        } -TimeoutSec 20 -ErrorAction Stop
+
+        if (-not $rdap.ldhName) {
+            throw 'RDAP response did not contain a domain name.'
+        }
+
+        Write-Host ("  Домен:     {0}" -f $rdap.ldhName) -ForegroundColor White
+
+        $registrarEntity = @($rdap.entities | Where-Object { @($_.roles) -contains 'registrar' } |
+            Select-Object -First 1)
+        if ($registrarEntity.Count -gt 0 -and $registrarEntity[0].vcardArray.Count -ge 2) {
+            $registrarName = @($registrarEntity[0].vcardArray[1] | Where-Object {
+                $_ -is [array] -and $_.Count -ge 4 -and $_[0] -in @('fn','org')
+            } | ForEach-Object { [string]$_.Item(3) } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+                Select-Object -First 1)
+            if ($registrarName.Count -gt 0) {
+                Write-Host ("  Регистратор: {0}" -f $registrarName[0]) -ForegroundColor Gray
+            }
+        }
+
+        $eventLabels = @{
+            registration = 'Регистрация'
+            expiration = 'Истечение срока'
+            'last changed' = 'Последнее изменение'
+            transfer = 'Передача'
+        }
+        foreach ($event in @($rdap.events)) {
+            if ($event.eventAction -in $eventLabels.Keys -and $event.eventDate) {
+                Write-Host ("  {0}: {1}" -f $eventLabels[$event.eventAction], $event.eventDate) -ForegroundColor Gray
+            }
+        }
+
+        $statuses = @($rdap.status | Where-Object { $_ })
+        if ($statuses.Count -gt 0) {
+            Write-Host ("  Статус: {0}" -f ($statuses -join ', ')) -ForegroundColor Gray
+        }
+
+        $nameServers = @($rdap.nameservers | ForEach-Object { $_.ldhName } |
+            Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -First 12)
+        if ($nameServers.Count -gt 0) {
+            Write-Host "  DNS-серверы:" -ForegroundColor Cyan
+            foreach ($nameServer in $nameServers) {
+                Write-Host ("    {0}" -f $nameServer) -ForegroundColor Gray
+            }
+        }
+
+        if ($nameServers.Count -eq 0 -and $statuses.Count -eq 0 -and $rdap.events.Count -eq 0) {
+            Write-Host "  RDAP-сервер вернул запись, но публичные регистрационные поля скрыты." -ForegroundColor DarkGray
+        }
+    } catch {
+        Write-Host ("  Не удалось получить регистрационные данные: {0}" -f $_.Exception.Message) -ForegroundColor Red
+        Write-Host "  Проверь домен и подключение к интернету." -ForegroundColor DarkGray
+    }
+
     Write-Host ""
 }
 
