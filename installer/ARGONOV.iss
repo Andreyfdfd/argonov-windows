@@ -57,6 +57,7 @@ Source: "..\payload\dotnet\*"; DestDir: "{localappdata}\Programs\ARGONOV-Depende
 Source: "..\Start-Argonov.cmd"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\Launch-Argonov.cmd"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\Install-ArgonovDependencies.cmd"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\Repair-ArgonovDependencies.cmd"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\setup\*"; DestDir: "{app}\setup"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\modules\*"; DestDir: "{app}\modules"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\profile.ps1"; DestDir: "{app}"; Flags: ignoreversion
@@ -66,6 +67,7 @@ Source: "..\docs\*"; DestDir: "{app}\docs"; Flags: ignoreversion recursesubdirs 
 
 [Icons]
 Name: "{autoprograms}\ARGONOV SHELL"; Filename: "{app}\Launch-Argonov.cmd"; WorkingDir: "{app}"
+Name: "{autoprograms}\ARGONOV SHELL\Repair dependencies"; Filename: "{app}\Repair-ArgonovDependencies.cmd"; WorkingDir: "{app}"
 Name: "{autodesktop}\ARGONOV SHELL"; Filename: "{app}\Launch-Argonov.cmd"; WorkingDir: "{app}"; Tasks: desktopicon
 
 [Run]
