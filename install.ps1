@@ -1,199 +1,221 @@
-﻿# ARGONOV SHELL · installer
+# ARGONOV SHELL installer
+[CmdletBinding()]
+param(
+    [string]$InstallRoot = (Join-Path $env:LOCALAPPDATA 'Programs\ARGONOV SHELL'),
+    [string]$ProfilePath = $PROFILE,
+    [switch]$ValidateOnly
+)
+$ErrorActionPreference = 'Stop'
 
-param([switch]$Force)
-
-$ErrorActionPreference = "Continue"
-
-function W-Head {
-    Write-Host ""
-    Write-Host "  ========================================" -ForegroundColor DarkCyan
-    Write-Host "   ARGONOV SHELL - installer" -ForegroundColor Cyan
-    Write-Host "  ========================================" -ForegroundColor DarkCyan
-    Write-Host ""
+function Write-InstallStep {
+    param([Parameter(Mandatory)][string]$Message)
+    Write-Host ''
+    Write-Host ("--- {0} ---" -f $Message) -ForegroundColor Cyan
 }
-function W-Ok    { param($m) Write-Host "  [OK]   $m" -ForegroundColor Green }
-function W-Warn  { param($m) Write-Host "  [WARN] $m" -ForegroundColor Yellow }
-function W-Err   { param($m) Write-Host "  [ERR]  $m" -ForegroundColor Red }
-function W-Info  { param($m) Write-Host "  [..]   $m" -ForegroundColor DarkGray }
-function W-Step  { param($m) Write-Host ""; Write-Host "  --- $m ---" -ForegroundColor Cyan }
-
-$ArgDir   = "C:\ARGONOV"
-$marker   = "$ArgDir\.installed"
-$profileP = $PROFILE
-$expected = ". C:\ARGONOV\profile.ps1"
-
-$alreadyInstalled = Test-Path $marker
-
-if ($alreadyInstalled -and -not $Force) {
-    W-Head
-    $when = (Get-Content $marker -Raw -ErrorAction SilentlyContinue).Trim()
-    Write-Host "  ARGONOV SHELL уже установлен." -ForegroundColor Green
-    Write-Host "  Дата установки: $when" -ForegroundColor DarkGray
-    Write-Host ""
-    Write-Host "  Переустановить: pwsh -ExecutionPolicy Bypass -File $ArgDir\install.ps1 -Force" -ForegroundColor Yellow
-    Write-Host ""
-    exit 0
+function Write-InstallOk {
+    param([Parameter(Mandatory)][string]$Message)
+    Write-Host ("[OK] {0}" -f $Message) -ForegroundColor Green
 }
-
-W-Head
-if ($alreadyInstalled -and $Force) {
-    Write-Host "  ПЕРЕУСТАНОВКА (-Force)" -ForegroundColor Yellow
-    Write-Host ""
-}
-
-$issues = @()
-$warnings = @()
-
-W-Step "PowerShell"
-$psMajor = $PSVersionTable.PSVersion.Major
-$psVer = $PSVersionTable.PSVersion.ToString()
-if ($psMajor -ge 7) { W-Ok "PowerShell $psVer" }
-else { W-Warn "PowerShell $psVer (рекомендуется 7+)"; $warnings += "PowerShell 7 не установлен" }
-
-W-Step "Python 3.14"
-$pyOk = $false
-try {
-    $pyVer = & py -3.14 --version 2>&1
-    if ($LASTEXITCODE -eq 0) { W-Ok "$pyVer"; $pyOk = $true }
-} catch {}
-if (-not $pyOk) { W-Warn "Python 3.14 не найден"; $warnings += "Python 3.14 не установлен" }
-
-W-Step "Git"
-$gitOk = $false
-try {
-    $gitVer = & git --version 2>&1
-    if ($LASTEXITCODE -eq 0) { W-Ok "$gitVer"; $gitOk = $true }
-} catch {}
-if (-not $gitOk) { W-Warn "Git не установлен"; $warnings += "Git не установлен" }
-
-W-Step "SSH (для GitHub)"
-if (Test-Path "$HOME\.ssh\id_ed25519.pub") { W-Ok "SSH-ключ найден" }
-else { W-Warn "SSH-ключ не найден"; $warnings += "SSH-ключ не настроен" }
-
-W-Step "LM Studio"
-if (Test-Path "$HOME\.lmstudio\bin\lms.exe") { W-Ok "lms.exe найден" }
-else { W-Warn "lms.exe не найден"; $warnings += "LM Studio не установлен" }
-
-W-Step "Структура проекта"
-if (Test-Path $ArgDir) { W-Ok "Папка: $ArgDir" }
-else {
-    W-Err "Папка $ArgDir не найдена"
-    W-Info "git clone git@github.com:Andreyfdfd/argonov-windows.git C:\ARGONOV"
-    exit 1
-}
-
-if (Test-Path "$ArgDir\profile.ps1") { W-Ok "profile.ps1" }
-else { W-Err "profile.ps1 не найден"; $issues += "profile.ps1 не найден" }
-
-W-Step "Реорганизация modules"
-$reorgScript = "$ArgDir\reorganize.ps1"
-if (Test-Path $reorgScript) {
-    $loosePs1 = Get-ChildItem "$ArgDir\modules" -Filter *.ps1 -File -ErrorAction SilentlyContinue
-    if ($loosePs1 -and $loosePs1.Count -gt 0) {
-        W-Info "Найдено $($loosePs1.Count) файлов в корне modules - реорганизую..."
-        & $reorgScript
-    } else {
-        W-Ok "modules уже структурированы"
+function Merge-MissingContent {
+    param([string]$Source, [string]$Destination)
+    if (-not (Test-Path -LiteralPath $Source -PathType Container)) { return }
+    if (-not (Test-Path -LiteralPath $Destination -PathType Container)) {
+        New-Item -ItemType Directory -Path $Destination -Force | Out-Null
     }
-} else {
-    W-Warn "reorganize.ps1 не найден"
-    $warnings += "reorganize.ps1 отсутствует"
-}
-
-if (Test-Path "$ArgDir\modules") {
-    $modCount = (Get-ChildItem "$ArgDir\modules" -Recurse -Filter *.ps1 -ErrorAction SilentlyContinue).Count
-    $catCount = (Get-ChildItem "$ArgDir\modules" -Directory -ErrorAction SilentlyContinue).Count
-    W-Ok "modules\ - $modCount файлов в $catCount категориях"
-} else {
-    W-Warn "Папка modules не найдена"
-    $warnings += "Папка modules пустая"
-}
-
-W-Step "Профиль PowerShell"
-if (-not (Test-Path $profileP)) {
-    New-Item -ItemType File -Path $profileP -Force | Out-Null
-}
-$profileContent = Get-Content $profileP -ErrorAction SilentlyContinue
-
-$hasLine = $false
-if ($profileContent) {
-    foreach ($line in $profileContent) {
-        if ($line.Trim() -eq $expected.Trim()) { $hasLine = $true; break }
-    }
-}
-
-if ($hasLine) {
-    W-Ok "ARGONOV уже в профиле"
-} else {
-    W-Info "Добавляю строку в профиль..."
-    Add-Content -Path $profileP -Value "" -Encoding UTF8
-    Add-Content -Path $profileP -Value $expected -Encoding UTF8
-    W-Ok "Добавлено: $expected"
-}
-
-W-Step "ExecutionPolicy"
-$policy = Get-ExecutionPolicy -Scope CurrentUser
-W-Info "Текущая политика: $policy"
-
-if ($policy -eq "RemoteSigned" -or $policy -eq "Unrestricted" -or $policy -eq "Bypass") {
-    W-Ok "Разрешает запуск скриптов"
-} elseif ($policy -eq "Restricted" -or $policy -eq "Undefined") {
-    W-Info "Устанавливаю RemoteSigned..."
-    try {
-        Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force -ErrorAction Stop
-        W-Ok "ExecutionPolicy: RemoteSigned"
-    } catch {
-        W-Warn "Не удалось: $($_.Exception.Message)"
-        $warnings += "ExecutionPolicy не установлен (не критично)"
-    }
-} else {
-    W-Ok "Политика: $policy"
-}
-
-W-Step "Проверка синтаксиса модулей"
-if (Test-Path "$ArgDir\modules") {
-    $mods = Get-ChildItem "$ArgDir\modules" -Recurse -Filter *.ps1 -ErrorAction SilentlyContinue
-    foreach ($mod in $mods) {
-        try {
-            $null = [System.Management.Automation.PSParser]::Tokenize((Get-Content $mod.FullName -Raw -Encoding UTF8), [ref]$null)
-            $relPath = $mod.FullName.Replace("$ArgDir\modules\", "")
-            W-Ok $relPath
-        } catch {
-            W-Err "$($mod.Name) - ошибка синтаксиса"
-            $issues += "$($mod.Name) - ошибка синтаксиса"
+    foreach ($item in Get-ChildItem -LiteralPath $Source -Force) {
+        $target = Join-Path $Destination $item.Name
+        if (-not (Test-Path -LiteralPath $target)) {
+            Copy-Item -LiteralPath $item.FullName -Destination $target -Recurse -Force
+        }
+        elseif ($item.PSIsContainer -and (Test-Path -LiteralPath $target -PathType Container)) {
+            Merge-MissingContent -Source $item.FullName -Destination $target
         }
     }
 }
-
-if ($issues.Count -eq 0) {
-    $now = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    Set-Content -Path $marker -Value $now -Encoding UTF8
-    W-Info "Маркер: $marker"
+function Get-ValidatedPowerShellFiles {
+    param([string]$Root)
+    $failures = [System.Collections.Generic.List[string]]::new()
+    $files = @(Get-ChildItem -LiteralPath $Root -Filter '*.ps1' -File -Recurse -Force |
+        Where-Object { $_.FullName -notmatch '[\\/](\.git|\.github|tests)[\\/]' })
+    foreach ($file in $files) {
+        $tokens = $null
+        $parseErrors = $null
+        try {
+            [System.Management.Automation.Language.Parser]::ParseFile($file.FullName, [ref]$tokens, [ref]$parseErrors) | Out-Null
+        }
+        catch {
+            $failures.Add(('{0}: {1}' -f $file.FullName, $_.Exception.Message))
+            continue
+        }
+        foreach ($parseError in @($parseErrors)) {
+            $failures.Add(('{0}:{1}: {2}' -f $file.FullName, $parseError.Extent.StartLineNumber, $parseError.Message))
+        }
+    }
+    if ($failures.Count -gt 0) {
+        $separator = [Environment]::NewLine + ' - '
+        throw ("PowerShell syntax validation failed:{0} - {1}" -f [Environment]::NewLine, ($failures -join $separator))
+    }
+    return $files
+}
+function Update-PowerShellProfile {
+    param([string]$TargetProfile, [string]$InstalledProfile)
+    $startMarker = '# >>> ARGONOV SHELL (managed by installer) >>>'
+    $endMarker = '# <<< ARGONOV SHELL (managed by installer) <<<'
+    $profileDirectory = Split-Path -Parent $TargetProfile
+    if (-not (Test-Path -LiteralPath $profileDirectory -PathType Container)) {
+        New-Item -ItemType Directory -Path $profileDirectory -Force | Out-Null
+    }
+    $profileExists = Test-Path -LiteralPath $TargetProfile -PathType Leaf
+    $original = if ($profileExists) { [System.IO.File]::ReadAllText($TargetProfile) } else { '' }
+    $remaining = [System.Collections.Generic.List[string]]::new()
+    $insideManagedBlock = $false
+    $foundStart = $false
+    $foundEnd = $false
+    foreach ($line in @($original -split '\r?\n')) {
+        $trimmed = $line.Trim()
+        if ($trimmed -eq $startMarker) {
+            if ($insideManagedBlock) { throw 'Nested ARGONOV profile markers found. No profile changes were made.' }
+            $insideManagedBlock = $true
+            $foundStart = $true
+            continue
+        }
+        if ($insideManagedBlock) {
+            if ($trimmed -eq $endMarker) {
+                $insideManagedBlock = $false
+                $foundEnd = $true
+            }
+            continue
+        }
+        if ($trimmed -eq $endMarker) { throw 'Unmatched ARGONOV end marker found. No profile changes were made.' }
+        if ($trimmed -in @('. C:\ARGONOV\profile.ps1', ". 'C:\ARGONOV\profile.ps1'", '. "C:\ARGONOV\profile.ps1"')) { continue }
+        $remaining.Add($line)
+    }
+    if ($insideManagedBlock -or ($foundStart -and -not $foundEnd)) {
+        throw 'Incomplete ARGONOV profile block found. No profile changes were made.'
+    }
+    $quotedProfile = $InstalledProfile.Replace("'", "''")
+    $managedBlock = @($startMarker, (". '{0}'" -f $quotedProfile), $endMarker) -join [Environment]::NewLine
+    $baseText = ($remaining.ToArray() -join [Environment]::NewLine).TrimEnd([char[]]@([char]13, [char]10))
+    if ($baseText.Length -gt 0) { $baseText += [Environment]::NewLine + [Environment]::NewLine }
+    $updated = $baseText + $managedBlock + [Environment]::NewLine
+    if ($updated -ceq $original) {
+        Write-InstallOk "PowerShell profile already points to ARGONOV: $TargetProfile"
+        return
+    }
+    if ($profileExists) {
+        $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+        $backupPath = "$TargetProfile.argonov-backup-$stamp"
+        [System.IO.File]::Copy($TargetProfile, $backupPath, $false)
+        Write-Host "Profile backup: $backupPath" -ForegroundColor DarkGray
+    }
+    [System.IO.File]::WriteAllText($TargetProfile, $updated, [System.Text.UTF8Encoding]::new($false))
+    Write-InstallOk "PowerShell profile updated: $TargetProfile"
 }
 
-Write-Host ""
-Write-Host "  ========================================" -ForegroundColor DarkCyan
-Write-Host "   ИТОГ" -ForegroundColor Cyan
-Write-Host "  ========================================" -ForegroundColor DarkCyan
-Write-Host ""
+try {
+    Write-Host ''
+    Write-Host '  ==========================================' -ForegroundColor DarkCyan
+    Write-Host '   ARGONOV SHELL - installer' -ForegroundColor Cyan
+    Write-Host '  ==========================================' -ForegroundColor DarkCyan
+    if ($PSVersionTable.PSVersion -lt [version]'7.6') {
+        throw ("ARGONOV SHELL requires PowerShell 7.6 or newer. Current version: {0}. Start this script with pwsh." -f $PSVersionTable.PSVersion)
+    }
+    if ([string]::IsNullOrWhiteSpace($InstallRoot)) { throw 'InstallRoot is empty. Specify a destination folder.' }
+    if ([string]::IsNullOrWhiteSpace($ProfilePath)) { throw 'PowerShell did not provide a profile path. Specify -ProfilePath.' }
 
-if ($issues.Count -gt 0) {
-    Write-Host "  КРИТИЧНЫЕ ПРОБЛЕМЫ:" -ForegroundColor Red
-    foreach ($i in $issues) { Write-Host "    - $i" -ForegroundColor Red }
-    Write-Host ""
-}
-if ($warnings.Count -gt 0) {
-    Write-Host "  ПРЕДУПРЕЖДЕНИЯ:" -ForegroundColor Yellow
-    foreach ($w in $warnings) { Write-Host "    - $w" -ForegroundColor Yellow }
-    Write-Host ""
-}
+    $sourceRoot = [System.IO.Path]::GetFullPath($PSScriptRoot)
+    $InstallRoot = [System.IO.Path]::GetFullPath($InstallRoot)
+    $ProfilePath = [System.IO.Path]::GetFullPath($ProfilePath)
+    $profileSource = Join-Path $sourceRoot 'profile.ps1'
+    $moduleSource = Join-Path $sourceRoot 'modules'
 
-if ($issues.Count -eq 0) {
-    Write-Host "  Оболочка готова. Перезапусти терминал." -ForegroundColor Green
-    Write-Host ""
-    exit 0
-} else {
-    Write-Host "  Сначала реши критичные проблемы." -ForegroundColor Yellow
-    Write-Host ""
-    exit 1
+    Write-InstallStep 'Project validation'
+    if (-not (Test-Path -LiteralPath $profileSource -PathType Leaf)) { throw "profile.ps1 not found in: $sourceRoot" }
+    if (-not (Test-Path -LiteralPath $moduleSource -PathType Container)) { throw "modules folder not found in: $sourceRoot" }
+    if ($InstallRoot -eq $sourceRoot) { throw 'InstallRoot cannot be the source project directory.' }
+
+    $validatedFiles = @(Get-ValidatedPowerShellFiles -Root $sourceRoot)
+    Write-InstallOk ("Validated {0} PowerShell files." -f $validatedFiles.Count)
+    if ($ValidateOnly) {
+        Write-InstallOk 'Validate-only completed. No files or profiles were changed.'
+        return
+    }
+
+    Write-InstallStep 'Preparing installation'
+    $parent = Split-Path -Parent $InstallRoot
+    if (-not (Test-Path -LiteralPath $parent -PathType Container)) { New-Item -ItemType Directory -Path $parent -Force | Out-Null }
+    $stageRoot = "$InstallRoot.staging-$([guid]::NewGuid().ToString('N'))"
+    $backupRoot = $null
+    New-Item -ItemType Directory -Path $stageRoot -Force | Out-Null
+
+    try {
+        $excludedNames = @('.git', '.github', 'tests', '.installed', '.argonov-install.json')
+        foreach ($item in Get-ChildItem -LiteralPath $sourceRoot -Force) {
+            if ($excludedNames -contains $item.Name) { continue }
+            Copy-Item -LiteralPath $item.FullName -Destination $stageRoot -Recurse -Force
+        }
+        if (Test-Path -LiteralPath $InstallRoot -PathType Container) {
+            foreach ($dataDirectory in @('music', 'vendor', 'data', 'config')) {
+                Merge-MissingContent -Source (Join-Path $InstallRoot $dataDirectory) -Destination (Join-Path $stageRoot $dataDirectory)
+            }
+        }
+
+        $manifest = [ordered]@{
+            product = 'ARGONOV SHELL'
+            installedAt = (Get-Date).ToString('o')
+            powershellVersion = $PSVersionTable.PSVersion.ToString()
+            installRoot = $InstallRoot
+        }
+        [System.IO.File]::WriteAllText(
+            (Join-Path $stageRoot '.argonov-install.json'),
+            ($manifest | ConvertTo-Json -Depth 4),
+            [System.Text.UTF8Encoding]::new($false)
+        )
+
+        if (Test-Path -LiteralPath $InstallRoot) {
+            $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+            $backupRoot = "$InstallRoot.backup-$stamp"
+            [System.IO.Directory]::Move($InstallRoot, $backupRoot)
+            Write-Host "Previous installation backup: $backupRoot" -ForegroundColor DarkGray
+        }
+        [System.IO.Directory]::Move($stageRoot, $InstallRoot)
+        Write-InstallOk "ARGONOV files installed to: $InstallRoot"
+    }
+    catch {
+        if ($backupRoot -and (Test-Path -LiteralPath $backupRoot) -and -not (Test-Path -LiteralPath $InstallRoot)) {
+            [System.IO.Directory]::Move($backupRoot, $InstallRoot)
+        }
+        throw
+    }
+    finally {
+        if (Test-Path -LiteralPath $stageRoot) { Remove-Item -LiteralPath $stageRoot -Recurse -Force -ErrorAction SilentlyContinue }
+    }
+
+    Write-InstallStep 'PowerShell profile'
+    Update-PowerShellProfile -TargetProfile $ProfilePath -InstalledProfile (Join-Path $InstallRoot 'profile.ps1')
+
+    Write-InstallStep 'Optional integrations'
+    foreach ($dependency in @(@{ Name = 'Git'; Command = 'git' }, @{ Name = 'Python launcher'; Command = 'py' })) {
+        if (Get-Command $dependency.Command -ErrorAction SilentlyContinue) {
+            Write-InstallOk ("{0} detected." -f $dependency.Name)
+        }
+        else {
+            Write-Host ("[OPTIONAL] {0} is not installed. Core shell installation does not require it." -f $dependency.Name) -ForegroundColor DarkYellow
+        }
+    }
+    if (Test-Path -LiteralPath (Join-Path $HOME '.lmstudio\bin\lms.exe') -PathType Leaf) {
+        Write-InstallOk 'LM Studio CLI detected.'
+    }
+    else {
+        Write-Host '[OPTIONAL] LM Studio is not installed. AI commands will be unavailable until configured.' -ForegroundColor DarkYellow
+    }
+    Write-Host ''
+    Write-Host 'ARGONOV SHELL installation completed.' -ForegroundColor Green
+    Write-Host 'Close and reopen PowerShell 7 to load the shell.' -ForegroundColor Cyan
+    Write-Host 'ExecutionPolicy and system-wide security settings were not changed.' -ForegroundColor DarkGray
+}
+catch {
+    Write-Host ''
+    Write-Host ("INSTALLATION FAILED: {0}" -f $_.Exception.Message) -ForegroundColor Red
+    throw
 }
