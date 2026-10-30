@@ -1,4 +1,4 @@
-# ARGONOV SHELL - per-user installer
+; ARGONOV SHELL - per-user installer
 #define AppName "ARGONOV SHELL"
 #define AppVersion "0.1.0"
 #define AppPublisher "Andreyfdfd"
