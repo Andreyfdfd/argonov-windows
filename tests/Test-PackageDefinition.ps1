@@ -58,6 +58,8 @@ Assert-PackageTest ($dependencyScript.Contains('ARGONOV_SYSINFO_LHM_DIR')) 'SYSI
 Assert-PackageTest ($dependencyScript.Contains('LibreHardwareMonitor')) 'SYSINFO sensor backend is installed automatically.'
 Assert-PackageTest ($dependencyScript.Contains('Get-AppxPackage -Name Microsoft.WindowsTerminal')) 'Existing Microsoft Store Windows Terminal is detected and reused.'
 Assert-PackageTest ($dependencyScript.Contains('WindowsTerminal.exe')) 'Portable Windows Terminal is downloaded and verified when required.'
+Assert-PackageTest ($dependencyScript.Contains('[System.Diagnostics.FileVersionInfo]::GetVersionInfo($terminalExe).FileVersion')) 'Terminal version is read from file metadata without starting the GUI.'
+Assert-PackageTest (-not $dependencyScript.Contains('$terminalExe --version')) 'Dependency setup never launches the Windows Terminal GUI just to inspect its version.'
 Assert-PackageTest ($cmd.Contains('-NoProfile')) 'Dedicated shell launch does not load the user PowerShell profile first.'
 Assert-PackageTest ($iss.Contains('uninsneveruninstall')) 'User data directories are preserved by uninstall.'
 Assert-PackageTest (-not $iss.Contains('$PROFILE')) 'Installer definition does not edit the current PowerShell profile.'
