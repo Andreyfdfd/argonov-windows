@@ -181,7 +181,7 @@ function dash {
             Write-Host "    └─ $lastCommit" -ForegroundColor Gray
         }
     } else {
-        Write-Host "    📁 $argonovRoot: не git-репозиторий" -ForegroundColor Red
+        Write-Host "    📁 $($argonovRoot): не git-репозиторий" -ForegroundColor Red
     }
     Write-Host ""
 
