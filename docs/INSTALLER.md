@@ -31,7 +31,7 @@ The installer wizard offers these default-selected tasks. The dependency bootstr
 | Windows Terminal | Existing MSIX package if present; otherwise portable ZIP under %LOCALAPPDATA%\Programs\ARGONOV-Dependencies\WindowsTerminal | Terminal host and ARGONOV profile |
 | LibreHardwareMonitor | Installed by the SYSINFO sensor setup to %LOCALAPPDATA%\ARGONOV\tools\LibreHardwareMonitor | Hardware sensor readings in SYSINFO |
 
-The Git and Windows Terminal archives are downloaded from their official project release channels and checked against the SHA-256 digest published with the release. Python's installer hash is pinned to the official Python 3.14.10 x64 distribution. The .NET runtime archive is checked against the SHA-512 published in Microsoft's release metadata.
+The Git and Windows Terminal archives are downloaded from their official project release channels and checked against the SHA-256 digest published with the release. Python packages are installed with pip --target into the shared ARGONOV package folder; the installer does not modify another Python installation's global or user site-packages. Python's installer hash is pinned to the official Python 3.14.10 x64 distribution. The .NET runtime archive is checked against the SHA-512 published in Microsoft's release metadata.
 
 The installer does not rewrite the user's settings.json or register an AppX extension. The Start menu launcher opens a new Windows Terminal tab and runs Start-Argonov.cmd directly. This works with an existing Store/unpackaged Terminal and with the ARGONOV-managed portable copy while leaving the user's profiles, themes, shortcuts and comments untouched.
 
