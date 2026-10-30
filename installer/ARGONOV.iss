@@ -37,7 +37,7 @@ Name: "russian"; MessagesFile: "compiler:Languages\Russian.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "Создать ярлык на рабочем столе"; GroupDescription: "Ярлыки:"; Flags: unchecked
-Name: "installGit"; Description: "Установить Git for Windows (PortableGit, если отсутствует)"; GroupDescription: "Компоненты и зависимости:"; Flags: checkedonce
+Name: "installGit"; Description: "Установить Git for Windows (MinGit, если отсутствует)"; GroupDescription: "Компоненты и зависимости:"; Flags: checkedonce
 Name: "installPython"; Description: "Установить Python 3.14 и пакет QR-кодов qrcode + Pillow"; GroupDescription: "Компоненты и зависимости:"; Flags: checkedonce
 Name: "installTerminal"; Description: "Установить Windows Terminal (если отсутствует)"; GroupDescription: "Компоненты и зависимости:"; Flags: checkedonce
 Name: "installSensors"; Description: "Установить LibreHardwareMonitor для датчиков SYSINFO"; GroupDescription: "Компоненты и зависимости:"; Flags: checkedonce
