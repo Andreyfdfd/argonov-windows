@@ -408,6 +408,21 @@ function Install-ArgonovTerminal {
         $appxPackage = Get-AppxPackage -Name Microsoft.WindowsTerminal -ErrorAction SilentlyContinue | Select-Object -First 1
     }
 
+    if (-not $ForceComponents -and -not $appxPackage) {
+        $existingTerminal = Get-Command wt.exe -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($existingTerminal) {
+            $script:Results.WindowsTerminal = [ordered]@{
+                Status = 'Existing'
+                Version = 'Unpackaged'
+                Mode = 'Unpackaged'
+                Path = $existingTerminal.Source
+                SettingsModified = $false
+            }
+            Write-DependencyLog "Using existing unpackaged Windows Terminal at $($existingTerminal.Source). User settings will not be modified." 'OK'
+            return
+        }
+    }
+
     if ($appxPackage) {
         $version = [string]$appxPackage.Version
         $script:Results.WindowsTerminal = [ordered]@{
