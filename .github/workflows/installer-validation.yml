@@ -30,7 +30,7 @@ jobs:
         shell: pwsh
         run: ./tests/Test-PackageDefinition.ps1
 
-      - name: Download pinned portable PowerShell runtime
+      - name: Download and verify portable PowerShell runtime
         shell: pwsh
         run: |
           $version = '7.6.9'
@@ -48,9 +48,47 @@ jobs:
           Expand-Archive -LiteralPath $archive -DestinationPath $payload -Force
           $pwsh = Join-Path $payload 'pwsh.exe'
           if (-not (Test-Path -LiteralPath $pwsh -PathType Leaf)) { throw 'Portable archive did not contain pwsh.exe.' }
-          $runtimeVersion = & $pwsh -NoLogo -NoProfile -Command '$PSVersionTable.PSVersion.ToString()'
-          if ($LASTEXITCODE -ne 0 -or $runtimeVersion -ne $version) { throw "Portable runtime version check failed: $runtimeVersion" }
-          Write-Host "Verified PowerShell $runtimeVersion ($actualSha256)." -ForegroundColor Green
+          Write-Host "Verified PowerShell archive SHA-256: $actualSha256." -ForegroundColor Green
+
+      - name: Download and verify app-local .NET runtime
+        shell: pwsh
+        run: |
+          $metadataUri = 'https://builds.dotnet.microsoft.com/dotnet/release-metadata/10.0/releases.json'
+          $metadata = Invoke-RestMethod -Uri $metadataUri
+          $runtimeVersion = [string]$metadata.'latest-runtime'
+          if ([string]::IsNullOrWhiteSpace($runtimeVersion)) { throw 'Microsoft release metadata did not provide latest-runtime.' }
+          $release = $metadata.releases | Where-Object { $_.runtime.version -eq $runtimeVersion } | Select-Object -First 1
+          if (-not $release) { throw "Release metadata for .NET runtime $runtimeVersion was not found." }
+          $runtimeAsset = $release.runtime.files | Where-Object {
+            $_.rid -eq 'win-x64' -and $_.name -eq 'dotnet-runtime-win-x64.zip'
+          } | Select-Object -First 1
+          if (-not $runtimeAsset) { throw "Windows x64 .NET runtime archive was not found for $runtimeVersion." }
+          $dotnetPayload = Join-Path $PWD 'payload\dotnet'
+          New-Item -ItemType Directory -Path $dotnetPayload -Force | Out-Null
+          $dotnetArchive = Join-Path $env:RUNNER_TEMP "dotnet-runtime-$runtimeVersion-win-x64.zip"
+          Invoke-WebRequest -Uri $runtimeAsset.url -OutFile $dotnetArchive
+          $expectedSha512 = [string]$runtimeAsset.hash
+          $actualSha512 = (Get-FileHash -LiteralPath $dotnetArchive -Algorithm SHA512).Hash
+          if ($actualSha512 -ne $expectedSha512) {
+            throw "Microsoft .NET runtime SHA-512 mismatch. Expected $expectedSha512, got $actualSha512."
+          }
+          Expand-Archive -LiteralPath $dotnetArchive -DestinationPath $dotnetPayload -Force
+          if (-not (Test-Path -LiteralPath (Join-Path $dotnetPayload 'host\fxr') -PathType Container)) {
+            throw 'App-local .NET runtime host/fxr folder is missing.'
+          }
+          Write-Host "Verified app-local .NET runtime $runtimeVersion ($actualSha512)." -ForegroundColor Green
+
+      - name: Verify portable PowerShell using app-local .NET
+        shell: pwsh
+        run: |
+          $env:DOTNET_ROOT = Join-Path $PWD 'payload\dotnet'
+          $env:DOTNET_ROOT_X64 = $env:DOTNET_ROOT
+          $portablePwsh = Join-Path $PWD 'payload\powershell\pwsh.exe'
+          $runtimeVersion = & $portablePwsh -NoLogo -NoProfile -Command '$PSVersionTable.PSVersion.ToString()'
+          if ($LASTEXITCODE -ne 0 -or $runtimeVersion -ne '7.6.9') {
+            throw "Portable PowerShell could not start using the private .NET runtime. Output: $runtimeVersion"
+          }
+          Write-Host "Portable PowerShell started with private .NET runtime." -ForegroundColor Green
 
       - name: Install verified Inno Setup compiler
         shell: pwsh
@@ -95,8 +133,15 @@ jobs:
           if ($process.ExitCode -ne 0) { throw "Setup.exe exited with $($process.ExitCode)." }
           $pwsh = Join-Path $target 'runtime\pwsh.exe'
           $launcher = Join-Path $target 'Start-Argonov.ps1'
+          $cmdLauncher = Join-Path $target 'Start-Argonov.cmd'
           if (-not (Test-Path -LiteralPath $pwsh -PathType Leaf)) { throw 'Installed pwsh.exe is missing.' }
-          if (-not (Test-Path -LiteralPath $launcher -PathType Leaf)) { throw 'Installed launcher is missing.' }
+          if (-not (Test-Path -LiteralPath $launcher -PathType Leaf)) { throw 'Installed PowerShell launcher is missing.' }
+          if (-not (Test-Path -LiteralPath $cmdLauncher -PathType Leaf)) { throw 'Installed runtime bootstrap command is missing.' }
+          $env:DOTNET_ROOT = Join-Path $target 'dotnet'
+          $env:DOTNET_ROOT_X64 = $env:DOTNET_ROOT
+          if (-not (Test-Path -LiteralPath (Join-Path $env:DOTNET_ROOT 'host\fxr') -PathType Container)) {
+            throw 'Installed app-local .NET runtime is missing.'
+          }
           $version = & $pwsh -NoLogo -NoProfile -Command '$PSVersionTable.PSVersion.ToString()'
           if ($LASTEXITCODE -ne 0 -or $version -ne '7.6.9') { throw "Installed PowerShell runtime failed: $version" }
           $keepFile = Join-Path $target 'music\uninstall-preservation-test.txt'
