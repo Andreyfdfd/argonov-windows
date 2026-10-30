@@ -40,6 +40,7 @@ Assert-PackageTest ($iss.Contains('Start-Argonov.cmd')) 'Installer creates the d
 Assert-PackageTest ($iss.Contains('Launch-Argonov.cmd')) 'Installer creates the Windows Terminal launcher.'
 Assert-PackageTest ($iss.Contains('Repair-ArgonovDependencies.cmd')) 'Installer creates the dependency repair shortcut.'
 Assert-PackageTest ($iss.Contains("WizardIsTaskSelected('installGit')")) 'Installer provides a Git dependency selection.'
+Assert-PackageTest ($iss.Contains('MinGit, если отсутствует')) 'Installer wizard names the lightweight MinGit dependency.'
 Assert-PackageTest ($iss.Contains("WizardIsTaskSelected('installPython')")) 'Installer provides a Python dependency selection.'
 Assert-PackageTest ($iss.Contains("WizardIsTaskSelected('installTerminal')")) 'Installer provides a Windows Terminal dependency selection.'
 Assert-PackageTest ($iss.Contains("WizardIsTaskSelected('installSensors')")) 'Installer provides a sensor backend selection.'
