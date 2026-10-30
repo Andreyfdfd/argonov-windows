@@ -134,16 +134,16 @@ jobs:
           $arguments = @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/SP-',"/DIR=$target","/LOG=$log",'/TASKS=installGit,installPython,installTerminal,installSensors')
           $process = Start-Process -FilePath $setup -ArgumentList $arguments -Wait -PassThru
           if ($process.ExitCode -ne 0) { throw "Setup.exe exited with $($process.ExitCode)." }
-          $pwsh = Join-Path $target 'runtime\pwsh.exe'
+          $pwsh = Join-Path $dependenciesRoot 'PowerShell\pwsh.exe'
           $launcher = Join-Path $target 'Start-Argonov.ps1'
           $cmdLauncher = Join-Path $target 'Start-Argonov.cmd'
-          if (-not (Test-Path -LiteralPath $pwsh -PathType Leaf)) { throw 'Installed pwsh.exe is missing.' }
+          if (-not (Test-Path -LiteralPath $pwsh -PathType Leaf)) { throw 'Shared PowerShell runtime is missing.' }
           if (-not (Test-Path -LiteralPath $launcher -PathType Leaf)) { throw 'Installed PowerShell launcher is missing.' }
           if (-not (Test-Path -LiteralPath $cmdLauncher -PathType Leaf)) { throw 'Installed runtime bootstrap command is missing.' }
-          $env:DOTNET_ROOT = Join-Path $target 'dotnet'
+          $env:DOTNET_ROOT = Join-Path $dependenciesRoot 'dotnet'
           $env:DOTNET_ROOT_X64 = $env:DOTNET_ROOT
           if (-not (Test-Path -LiteralPath (Join-Path $env:DOTNET_ROOT 'host\fxr') -PathType Container)) {
-            throw 'Installed app-local .NET runtime is missing.'
+            throw 'Shared .NET runtime is missing.'
           }
           $version = & $pwsh -NoLogo -NoProfile -Command '$PSVersionTable.PSVersion.ToString()'
           if ($LASTEXITCODE -ne 0 -or $version -ne '7.6.9') { throw "Installed PowerShell runtime failed: $version" }
@@ -182,12 +182,13 @@ jobs:
           $uninstall = Start-Process -FilePath $uninstaller -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART') -Wait -PassThru
           if ($uninstall.ExitCode -ne 0) { throw "Uninstaller exited with $($uninstall.ExitCode)." }
           if (-not (Test-Path -LiteralPath $keepFile -PathType Leaf)) { throw 'User data was removed by uninstaller.' }
-          if (Test-Path -LiteralPath $pwsh -PathType Leaf) { throw 'PowerShell runtime remains after uninstall.' }
+          if (-not (Test-Path -LiteralPath $pwsh -PathType Leaf)) { throw 'Shared PowerShell runtime was removed during shell uninstall.' }
+          if (-not (Test-Path -LiteralPath (Join-Path $env:DOTNET_ROOT 'host\fxr') -PathType Container)) { throw 'Shared .NET runtime was removed during shell uninstall.' }
           if (-not (Test-Path -LiteralPath $gitExe -PathType Leaf)) { throw 'Shared Git dependency was removed during shell uninstall.' }
           if (-not (Test-Path -LiteralPath $pythonExe -PathType Leaf)) { throw 'Shared Python dependency was removed during shell uninstall.' }
           if (-not (Test-Path -LiteralPath $terminalExe -PathType Leaf)) { throw 'Shared Windows Terminal dependency was removed during shell uninstall.' }
           if (-not (Test-Path -LiteralPath $terminalCli -PathType Leaf)) { throw 'Shared Windows Terminal wt.exe was removed during shell uninstall.' }
-          Write-Host 'Setup install/uninstall smoke test passed; shell was removed and shared dependencies/user data were preserved.' -ForegroundColor Green
+          Write-Host 'Setup install/uninstall smoke test passed; shell was removed and shared PowerShell/.NET/Git/Python/Terminal dependencies and user data were preserved.' -ForegroundColor Green
           Remove-Item -LiteralPath $target -Recurse -Force
           Remove-Item -LiteralPath $dependenciesRoot -Recurse -Force -ErrorAction SilentlyContinue
           Remove-Item -LiteralPath (Join-Path $env:LOCALAPPDATA 'ARGONOV') -Recurse -Force -ErrorAction SilentlyContinue
