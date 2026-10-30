@@ -173,7 +173,7 @@ jobs:
           if (-not (Test-Path -LiteralPath $gitExe -PathType Leaf)) { throw 'Isolated MinGit dependency was not installed.' }
 
           $gitVersion = (& $gitExe --version 2>&1 | Out-String).Trim()
-          if ($LASTEXITCODE -ne 0 -or $gitVersion -notmatch '\.windows\.\d+
+          if ($LASTEXITCODE -ne 0 -or $gitVersion -notmatch '\.windows\.\d+$') { throw "MinGit runtime check failed: $gitVersion" }
           if (-not (Test-Path -LiteralPath $pythonExe -PathType Leaf)) { throw 'Isolated Python 3.14 dependency was not installed.' }
           if (-not (Test-Path -LiteralPath $terminalExe -PathType Leaf)) { throw 'Portable Windows Terminal dependency was not installed.' }
           if (-not (Test-Path -LiteralPath $terminalCli -PathType Leaf)) { throw 'Windows Terminal wt.exe command was not installed.' }
