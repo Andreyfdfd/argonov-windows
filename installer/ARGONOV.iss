@@ -86,7 +86,6 @@ begin
     if WizardIsTaskSelected('installTerminal') then Params := Params + ' -InstallTerminal';
     if WizardIsTaskSelected('installSensors') then Params := Params + ' -InstallSensors';
 
-    if Params <> '' then
     begin
       CommandLine := '/D /S /C ""' + ExpandConstant('{app}\Install-ArgonovDependencies.cmd') + '"' + Params + '"';
       if not Exec(ExpandConstant('{sys}\cmd.exe'), CommandLine, ExpandConstant('{app}'), SW_SHOW, ewWaitUntilTerminated, ResultCode) then
