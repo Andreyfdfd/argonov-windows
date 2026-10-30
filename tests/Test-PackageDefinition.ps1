@@ -48,6 +48,9 @@ Assert-PackageTest ($cmd.Contains('-NoProfile')) 'Dedicated shell launch does no
 Assert-PackageTest ($iss.Contains('uninsneveruninstall')) 'User data directories are preserved by uninstall.'
 Assert-PackageTest (-not $iss.Contains('$PROFILE')) 'Installer definition does not edit the current PowerShell profile.'
 $launcherRuntimePattern = 'Join-Path $PSScriptRoot ''runtime\pwsh.exe'''
-Assert-PackageTest ($start.Contains($launcherRuntimePattern)) 'Launcher uses the bundled PowerShell runtime.'
+Assert-PackageTest ($start.Contains("Join-Path `$PSHOME 'pwsh.exe'")) 'Shell launcher uses the shared PowerShell runtime.'
 Assert-PackageTest ($start.Contains('. $argonovProfile')) 'Launcher loads ARGONOV profile explicitly.'
+Assert-PackageTest ($iss.Contains('DestDir: "{localappdata}\\Programs\\ARGONOV-Dependencies\\PowerShell"')) 'PowerShell runtime is installed in shared dependency storage.'
+Assert-PackageTest ($iss.Contains('DestDir: "{localappdata}\\Programs\\ARGONOV-Dependencies\\dotnet"')) '.NET runtime is installed in shared dependency storage.'
+Assert-PackageTest ($iss.Contains('uninsneveruninstall')) 'Shared runtime files survive ARGONOV uninstallation.'
 Write-Host 'PACKAGE DEFINITION TESTS PASSED' -ForegroundColor Green
