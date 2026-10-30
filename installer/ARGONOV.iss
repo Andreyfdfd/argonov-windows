@@ -15,7 +15,7 @@ AppId={#AppId}
 AppName={#AppName}
 AppVersion={#AppVersion}
 AppPublisher={#AppPublisher}
-DefaultDirName={localappdata}\Programs\ARGONOV SHELL
+DefaultDirName={localappdata}\Programs\{#AppName}
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
@@ -72,9 +72,9 @@ Source: "..\README.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\docs\*"; DestDir: "{app}\docs"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{autoprograms}\ARGONOV SHELL"; Filename: "{app}\Launch-Argonov.cmd"; WorkingDir: "{app}"
-Name: "{autoprograms}\ARGONOV SHELL\Repair dependencies"; Filename: "{app}\Repair-ArgonovDependencies.cmd"; WorkingDir: "{app}"
-Name: "{autodesktop}\ARGONOV SHELL"; Filename: "{app}\Launch-Argonov.cmd"; WorkingDir: "{app}"; Tasks: desktopicon
+Name: "{autoprograms}\{#AppName}"; Filename: "{app}\Launch-Argonov.cmd"; WorkingDir: "{app}"
+Name: "{autoprograms}\{#AppName}\Repair dependencies"; Filename: "{app}\Repair-ArgonovDependencies.cmd"; WorkingDir: "{app}"
+Name: "{autodesktop}\{#AppName}"; Filename: "{app}\Launch-Argonov.cmd"; WorkingDir: "{app}"; Tasks: desktopicon
 
 [Run]
 Filename: "{app}\Launch-Argonov.cmd"; Description: "Запустить ARGONOV SHELL"; Flags: postinstall nowait skipifsilent
