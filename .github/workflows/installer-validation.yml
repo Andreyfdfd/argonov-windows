@@ -1,22 +1,109 @@
-name: Installer validation
+name: Installer validation and build
+
 on:
   push:
-    branches: [main, 'feature/**']
-  pull_request:
+    branches: ['feature/installer-bootstrap']
+  workflow_dispatch:
+
 permissions:
   contents: read
+
 jobs:
-  installer-tests:
+  installer-tests-and-build:
     runs-on: windows-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Check PowerShell runtime
+
+      - name: Check PowerShell runtime version
         shell: pwsh
         run: |
           if ($PSVersionTable.PSVersion -lt [version]'7.6') {
             throw "PowerShell 7.6+ is required. Runner has $($PSVersionTable.PSVersion)."
           }
-      - name: Run installer tests
+
+      - name: Run installer logic tests
         shell: pwsh
         run: ./tests/Test-Installer.ps1
+
+      - name: Run package definition tests
+        shell: pwsh
+        run: ./tests/Test-PackageDefinition.ps1
+
+      - name: Download pinned portable PowerShell runtime
+        shell: pwsh
+        run: |
+          $version = '7.6.9'
+          $asset = "PowerShell-$version-win-x64.zip"
+          $expectedSha256 = 'CE7484804C0F0AD4DDA10C958E71ACDAF7EEBFB22505C1B480F89E0E9F1DA94D'
+          $uri = "https://github.com/PowerShell/PowerShell/releases/download/v$version/$asset"
+          $payload = Join-Path $PWD 'payload\powershell'
+          New-Item -ItemType Directory -Path $payload -Force | Out-Null
+          $archive = Join-Path $env:RUNNER_TEMP $asset
+          Invoke-WebRequest -Uri $uri -OutFile $archive
+          $actualSha256 = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash
+          if ($actualSha256 -ne $expectedSha256) {
+            throw "PowerShell archive SHA-256 mismatch. Expected $expectedSha256, got $actualSha256."
+          }
+          Expand-Archive -LiteralPath $archive -DestinationPath $payload -Force
+          $pwsh = Join-Path $payload 'pwsh.exe'
+          if (-not (Test-Path -LiteralPath $pwsh -PathType Leaf)) { throw 'Portable archive did not contain pwsh.exe.' }
+          $runtimeVersion = & $pwsh -NoLogo -NoProfile -Command '$PSVersionTable.PSVersion.ToString()'
+          if ($LASTEXITCODE -ne 0 -or $runtimeVersion -ne $version) { throw "Portable runtime version check failed: $runtimeVersion" }
+          Write-Host "Verified PowerShell $runtimeVersion ($actualSha256)." -ForegroundColor Green
+
+      - name: Install Inno Setup compiler
+        shell: pwsh
+        run: |
+          choco install innosetup --version=6.7.4 --yes --no-progress
+          if ($LASTEXITCODE -ne 0) { throw 'Inno Setup installation failed.' }
+
+      - name: Compile Setup.exe
+        shell: pwsh
+        run: |
+          $candidates = @(
+            'C:\Program Files (x86)\Inno Setup 6\ISCC.exe',
+            'C:\Program Files\Inno Setup 6\ISCC.exe'
+          )
+          $iscc = $candidates | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1
+          if (-not $iscc) { throw 'ISCC.exe was not found after installing Inno Setup.' }
+          & $iscc '/Qp' 'installer\ARGONOV.iss'
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup compilation failed with exit code $LASTEXITCODE." }
+          $setup = 'dist\ARGONOV-SHELL-Setup-x64.exe'
+          if (-not (Test-Path -LiteralPath $setup -PathType Leaf)) { throw 'Compiled Setup.exe was not created.' }
+          Get-FileHash -LiteralPath $setup -Algorithm SHA256 | Format-List
+
+      - name: Install and uninstall smoke test in runner sandbox
+        shell: pwsh
+        run: |
+          $setup = (Resolve-Path 'dist\ARGONOV-SHELL-Setup-x64.exe').Path
+          $target = Join-Path $env:RUNNER_TEMP 'ARGONOV-SMOKE-INSTALL'
+          $log = Join-Path $env:RUNNER_TEMP 'argonov-setup-smoke.log'
+          $arguments = @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/SP-',"/DIR=$target","/LOG=$log")
+          $process = Start-Process -FilePath $setup -ArgumentList $arguments -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw "Setup.exe exited with $($process.ExitCode)." }
+          $pwsh = Join-Path $target 'runtime\pwsh.exe'
+          $launcher = Join-Path $target 'Start-Argonov.ps1'
+          if (-not (Test-Path -LiteralPath $pwsh -PathType Leaf)) { throw 'Installed pwsh.exe is missing.' }
+          if (-not (Test-Path -LiteralPath $launcher -PathType Leaf)) { throw 'Installed launcher is missing.' }
+          $version = & $pwsh -NoLogo -NoProfile -Command '$PSVersionTable.PSVersion.ToString()'
+          if ($LASTEXITCODE -ne 0 -or $version -ne '7.6.9') { throw "Installed PowerShell runtime failed: $version" }
+          $keepFile = Join-Path $target 'music\uninstall-preservation-test.txt'
+          New-Item -ItemType Directory -Path (Split-Path -Parent $keepFile) -Force | Out-Null
+          Set-Content -LiteralPath $keepFile -Value 'USER_DATA_MUST_SURVIVE'
+          $uninstaller = Join-Path $target 'unins000.exe'
+          if (-not (Test-Path -LiteralPath $uninstaller -PathType Leaf)) { throw 'Uninstaller was not created.' }
+          $uninstall = Start-Process -FilePath $uninstaller -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART') -Wait -PassThru
+          if ($uninstall.ExitCode -ne 0) { throw "Uninstaller exited with $($uninstall.ExitCode)." }
+          if (-not (Test-Path -LiteralPath $keepFile -PathType Leaf)) { throw 'User data was removed by uninstaller.' }
+          if (Test-Path -LiteralPath $pwsh -PathType Leaf) { throw 'PowerShell runtime remains after uninstall.' }
+          Write-Host 'Setup install/uninstall smoke test passed; user data was preserved.' -ForegroundColor Green
+          Remove-Item -LiteralPath $target -Recurse -Force
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ARGONOV-SHELL-Setup-x64
+          path: dist/ARGONOV-SHELL-Setup-x64.exe
+          if-no-files-found: error
+          retention-days: 14
