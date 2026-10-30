@@ -44,7 +44,7 @@ Assert-PackageTest (-not $dependencyScript.Contains('Get-Content -LiteralPath $s
 Assert-PackageTest ($iss.Contains("WizardIsTaskSelected('installSensors')")) 'Installer provides a sensor backend selection.'
 Assert-PackageTest ($dependencyScript.Contains('Get-GitHubLatestRelease')) 'Dependency bootstrap retrieves maintained GitHub releases.'
 Assert-PackageTest ($dependencyScript.Contains('PortableGit-.+-64-bit')) 'Git is deployed from the official portable distribution without admin installation.'
-Assert-PackageTest ($dependencyScript.Contains('$startInfo.Arguments = ''-y -o''')) 'PortableGit uses the current 7-Zip SFX extraction switches.'
+Assert-PackageTest ($dependencyScript.Contains('$startInfo.Arguments = ''-y -o"')) 'PortableGit uses the current 7-Zip SFX extraction switches.'
 Assert-PackageTest ($dependencyScript.Contains("Test-Path -LiteralPath (Join-Path `$stagingRoot 'etc\post-install')")) 'PortableGit post-install scripts are verified before accepting Git.'
 Assert-PackageTest ($dependencyScript.Contains('$bashVersion = (& $stagedBash --version')) 'PortableGit Bash is probed in addition to git.exe.'
 Assert-PackageTest ($dependencyScript.Contains('Invoke-VerifiedDownload')) 'External installers are SHA-256 verified before execution.'
