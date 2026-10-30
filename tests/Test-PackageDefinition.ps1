@@ -42,7 +42,7 @@ Assert-PackageTest ($iss.Contains("WizardIsTaskSelected('installTerminal')")) 'I
 Assert-PackageTest ($dependencyScript.Contains('WindowsTerminal.exe')) 'Windows Terminal executable is checked during dependency setup.'
 Assert-PackageTest (-not $dependencyScript.Contains('settings.json')) 'Windows Terminal user settings are not rewritten by the installer.'
 Assert-PackageTest ($launch.Contains('wt.exe -d')) 'Launcher opens ARGONOV as a command tab in an existing Windows Terminal.'
-Assert-PackageTest ($launch.Contains('WindowsTerminal\\wt.exe')) 'Launcher also supports the ARGONOV-managed portable Windows Terminal.'
+Assert-PackageTest ($launch.Contains('WindowsTerminal\wt.exe')) 'Launcher also supports the ARGONOV-managed portable Windows Terminal.'
 Assert-PackageTest ($iss.Contains("WizardIsTaskSelected('installSensors')")) 'Installer provides a sensor backend selection.'
 Assert-PackageTest ($dependencyScript.Contains('Get-GitHubLatestRelease')) 'Dependency bootstrap retrieves maintained GitHub releases.'
 Assert-PackageTest ($dependencyScript.Contains('PortableGit-.+-64-bit')) 'Git is deployed from the official portable distribution without admin installation.'
