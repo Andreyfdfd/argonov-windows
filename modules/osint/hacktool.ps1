@@ -113,7 +113,7 @@ function scan-whois {
     }
 
     Write-Host ""
-    Write-Host "  WHOIS / RDAP для $queryDomain:" -ForegroundColor Yellow
+    Write-Host "  WHOIS / RDAP для ${queryDomain}:" -ForegroundColor Yellow
     Write-Host "  -----------------------------------------" -ForegroundColor DarkCyan
 
     # Keep support for a classic WHOIS client when the user already has one.
@@ -155,7 +155,7 @@ function scan-whois {
         if ($registrarEntity.Count -gt 0 -and $registrarEntity[0].vcardArray.Count -ge 2) {
             $registrarName = @($registrarEntity[0].vcardArray[1] | Where-Object {
                 $_ -is [array] -and $_.Count -ge 4 -and $_[0] -in @('fn','org')
-            } | ForEach-Object { [string]$_.Item(3) } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+            } | ForEach-Object { [string]$_[3] } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
                 Select-Object -First 1)
             if ($registrarName.Count -gt 0) {
                 Write-Host ("  Регистратор: {0}" -f $registrarName[0]) -ForegroundColor Gray
@@ -188,7 +188,7 @@ function scan-whois {
             }
         }
 
-        if ($nameServers.Count -eq 0 -and $statuses.Count -eq 0 -and $rdap.events.Count -eq 0) {
+        if ($nameServers.Count -eq 0 -and $statuses.Count -eq 0 -and @($rdap.events).Count -eq 0) {
             Write-Host "  RDAP-сервер вернул запись, но публичные регистрационные поля скрыты." -ForegroundColor DarkGray
         }
     } catch {
