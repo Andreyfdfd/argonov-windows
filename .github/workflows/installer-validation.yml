@@ -131,7 +131,7 @@ jobs:
         run: |
           $setup = (Resolve-Path 'dist\ARGONOV-SHELL-Setup-x64.exe').Path
           $target = Join-Path $env:RUNNER_TEMP 'ARGONOV-SMOKE-INSTALL'
-          $dependenciesRoot = Join-Path $env:RUNNER_TEMP 'ARGONOV-SMOKE-DEPS'
+          $dependenciesRoot = Join-Path $env:LOCALAPPDATA 'Programs\ARGONOV-Dependencies'
           $env:ARGONOV_INSTALLER_TEST = '1'
           $env:ARGONOV_DEPENDENCY_ROOT = $dependenciesRoot
           $log = Join-Path $env:RUNNER_TEMP 'argonov-setup-smoke.log'
