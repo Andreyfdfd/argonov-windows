@@ -58,7 +58,7 @@ Assert-PackageTest ($dependencyScript.Contains('Get-GitHubLatestRelease')) 'Depe
 Assert-PackageTest ($dependencyScript.Contains('MinGit-.+-64-bit\.zip')) 'Git is deployed from the official MinGit ZIP.'
 Assert-PackageTest ($dependencyScript.Contains('Expand-Archive -LiteralPath $archive -DestinationPath $stagingRoot')) 'MinGit is extracted with built-in Windows archive support.'
 Assert-PackageTest ($dependencyScript.Contains('cmd\git.exe')) 'MinGit git.exe is validated before the dependency is accepted.'
-Assert-PackageTest ($dependencyScript.Contains('usr\bin\ssh.exe')) 'MinGit OpenSSH client is validated before the dependency is accepted.'
+Assert-PackageTest ($dependencyScript.Contains('SSH transport can be enabled later')) 'Missing OpenSSH does not block Git HTTPS transport.'
 Assert-PackageTest (-not $dependencyScript.Contains('PortableGit-')) 'Dependency bootstrap does not launch the PortableGit SFX installer.'
 Assert-PackageTest ($dependencyScript.Contains('Invoke-VerifiedDownload')) 'External installers and archives are hash-verified.'
 Assert-PackageTest ($dependencyScript.Contains('qrcode[pil]')) 'Python QR dependencies are installed automatically.'
