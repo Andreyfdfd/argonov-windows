@@ -25,7 +25,7 @@ The installer wizard offers these default-selected tasks. The dependency bootstr
 
 | Component | Deployment | Purpose |
 |---|---|---|
-| Git for Windows | PortableGit self-extracting archive under %LOCALAPPDATA%\Programs\ARGONOV-Dependencies\Git | Git commands, SSH client and Git aliases |
+| Git for Windows | SHA-256-verified MinGit ZIP under %LOCALAPPDATA%\Programs\ARGONOV-Dependencies\Git | Non-interactive Git commands, OpenSSH client and Git aliases |
 | Python 3.14 | Per-user Python install under %LOCALAPPDATA%\Programs\ARGONOV-Dependencies\Python314 | Python-based shell utilities |
 | qrcode and Pillow | Per-user pip package installation | QR generation and PNG image output |
 | Windows Terminal | Existing MSIX package if present; otherwise portable ZIP under %LOCALAPPDATA%\Programs\ARGONOV-Dependencies\WindowsTerminal | Terminal host and ARGONOV profile |
