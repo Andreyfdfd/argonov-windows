@@ -30,6 +30,12 @@ try {
     Write-Host "Downloaded source: $projectRoot" -ForegroundColor DarkGray
     Write-Host 'Running isolated installer tests...' -ForegroundColor Cyan
     & $testScript
+    if ($LASTEXITCODE -ne 0) { throw 'Installer logic tests failed.' }
+
+    $packageTest = Join-Path $projectRoot 'tests\Test-PackageDefinition.ps1'
+    if (-not (Test-Path -LiteralPath $packageTest -PathType Leaf)) { throw 'Package definition tests were not found.' }
+    & $packageTest
+    if ($LASTEXITCODE -ne 0) { throw 'Package definition tests failed.' }
     Write-Host ''
     Write-Host "BRANCH TEST PASSED: $Branch" -ForegroundColor Green
     if ($KeepFiles) { Write-Host "Files retained at: $testRoot" -ForegroundColor DarkGray }
