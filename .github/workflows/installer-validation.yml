@@ -52,11 +52,21 @@ jobs:
           if ($LASTEXITCODE -ne 0 -or $runtimeVersion -ne $version) { throw "Portable runtime version check failed: $runtimeVersion" }
           Write-Host "Verified PowerShell $runtimeVersion ($actualSha256)." -ForegroundColor Green
 
-      - name: Install Inno Setup compiler
+      - name: Install verified Inno Setup compiler
         shell: pwsh
         run: |
-          winget install --id JRSoftware.InnoSetup -e --version 6.7.4 --source winget --silent --accept-source-agreements --accept-package-agreements
-          if ($LASTEXITCODE -ne 0) { throw "Inno Setup 6.7.4 installation failed with exit code $LASTEXITCODE." }
+          $version = '6.7.4'
+          $installerUrl = 'https://github.com/jrsoftware/issrc/releases/download/is-6_7_4/innosetup-6.7.4.exe'
+          $installerFile = Join-Path $env:RUNNER_TEMP 'innosetup-6.7.4.exe'
+          Invoke-WebRequest -Uri $installerUrl -OutFile $installerFile
+          $signature = Get-AuthenticodeSignature -LiteralPath $installerFile
+          if ($signature.Status -ne 'Valid') { throw "Inno Setup signature status is $($signature.Status)." }
+          if ($signature.SignerCertificate.Subject -notmatch 'Pyrsys B\.V\.') {
+            throw "Unexpected Inno Setup publisher: $($signature.SignerCertificate.Subject)"
+          }
+          $process = Start-Process -FilePath $installerFile -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/SP-','/CURRENTUSER') -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw "Inno Setup $version installation failed with exit code $($process.ExitCode)." }
+          Write-Host "Verified and installed Inno Setup $version." -ForegroundColor Green
 
       - name: Compile Setup.exe
         shell: pwsh
