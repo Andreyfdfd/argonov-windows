@@ -4,7 +4,11 @@
 
 $script:ARGONOV_SYSINFO_ROOT = Join-Path $HOME '.argonov\sysinfo'
 $script:ARGONOV_SYSINFO_REPORTS = Join-Path $script:ARGONOV_SYSINFO_ROOT 'reports'
-$script:ARGONOV_SYSINFO_LHM_DIR = Join-Path $env:LOCALAPPDATA 'ARGONOV\tools\LibreHardwareMonitor'
+$script:ARGONOV_SYSINFO_LHM_DIR = if (-not [string]::IsNullOrWhiteSpace($env:ARGONOV_SYSINFO_LHM_DIR)) {
+    [System.IO.Path]::GetFullPath($env:ARGONOV_SYSINFO_LHM_DIR)
+} else {
+    Join-Path $env:LOCALAPPDATA 'ARGONOV\tools\LibreHardwareMonitor'
+}
 $script:ARGONOV_SYSINFO_HISTORY = Join-Path $script:ARGONOV_SYSINFO_ROOT 'history.csv'
 $script:ARGONOV_SYSINFO_VERSION = '2.3.0'
 $script:ARGONOV_SYSINFO_LHM_RESOLVER_REGISTERED = $false
