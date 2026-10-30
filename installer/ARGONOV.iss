@@ -2,7 +2,7 @@
 #define AppName "ARGONOV SHELL"
 #define AppVersion "0.1.0"
 #define AppPublisher "Andreyfdfd"
-#define AppExeName "runtime\pwsh.exe"
+#define AppExeName "PowerShell\pwsh.exe"
 
 [Setup]
 AppId={{F62C96D2-2A2B-4F69-9F31-4DAA9F9F78D2}
@@ -16,7 +16,7 @@ PrivilegesRequired=lowest
 ArchitecturesAllowed=x64
 ArchitecturesInstallIn64BitMode=x64
 Uninstallable=yes
-UninstallDisplayIcon={app}\{#AppExeName}
+UninstallDisplayIcon={localappdata}\Programs\ARGONOV-Dependencies\{#AppExeName}
 OutputDir=..\dist
 OutputBaseFilename=ARGONOV-SHELL-Setup-x64
 Compression=lzma2
@@ -43,14 +43,17 @@ Name: "installTerminal"; Description: "Установить Windows Terminal (е
 Name: "installSensors"; Description: "Установить LibreHardwareMonitor для датчиков SYSINFO"; GroupDescription: "Компоненты и зависимости:"; Flags: checkedonce
 
 [Dirs]
+Name: "{localappdata}\Programs\ARGONOV-Dependencies"; Flags: uninsneveruninstall
+Name: "{localappdata}\Programs\ARGONOV-Dependencies\PowerShell"; Flags: uninsneveruninstall
+Name: "{localappdata}\Programs\ARGONOV-Dependencies\dotnet"; Flags: uninsneveruninstall
 Name: "{app}\music"; Flags: uninsneveruninstall
 Name: "{app}\vendor"; Flags: uninsneveruninstall
 Name: "{app}\data"; Flags: uninsneveruninstall
 Name: "{app}\config"; Flags: uninsneveruninstall
 
 [Files]
-Source: "..\payload\powershell\*"; DestDir: "{app}\runtime"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "..\payload\dotnet\*"; DestDir: "{app}\dotnet"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\payload\powershell\*"; DestDir: "{localappdata}\Programs\ARGONOV-Dependencies\PowerShell"; Flags: ignoreversion recursesubdirs createallsubdirs uninsneveruninstall
+Source: "..\payload\dotnet\*"; DestDir: "{localappdata}\Programs\ARGONOV-Dependencies\dotnet"; Flags: ignoreversion recursesubdirs createallsubdirs uninsneveruninstall
 Source: "..\Start-Argonov.cmd"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\Launch-Argonov.cmd"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\Install-ArgonovDependencies.cmd"; DestDir: "{app}"; Flags: ignoreversion
