@@ -449,6 +449,17 @@ function Install-ArgonovSensors {
     Write-DependencyLog 'LibreHardwareMonitor backend verified.' 'OK'
 }
 
+$sharedPowerShell = Join-Path $DependencyRoot 'PowerShell'
+$sharedDotnet = Join-Path $DependencyRoot 'dotnet'
+if (Test-Path -LiteralPath (Join-Path $sharedPowerShell 'pwsh.exe') -PathType Leaf) {
+    Add-UserPathEntry -Path $sharedPowerShell
+    Write-DependencyLog 'Shared PowerShell runtime is available on the current-user PATH.' 'OK'
+}
+if (Test-Path -LiteralPath (Join-Path $sharedDotnet 'dotnet.exe') -PathType Leaf) {
+    Add-UserPathEntry -Path $sharedDotnet
+    Write-DependencyLog 'Shared .NET runtime is available on the current-user PATH.' 'OK'
+}
+
 Write-DependencyLog "Starting dependency setup. InstallRoot=$InstallRoot; DependencyRoot=$DependencyRoot"
 
 if ($InstallGit) {
