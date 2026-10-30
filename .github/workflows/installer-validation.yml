@@ -173,13 +173,14 @@ jobs:
           if (-not (Test-Path -LiteralPath $terminalCli -PathType Leaf)) { throw 'Windows Terminal wt.exe command was not installed.' }
           & $pythonExe -c 'import qrcode; from PIL import Image'
           if ($LASTEXITCODE -ne 0) { throw 'Python qrcode/Pillow package verification failed.' }
-          $terminalFragment = Join-Path $env:LOCALAPPDATA 'Microsoft\Windows Terminal\Fragments\ARGONOV-SHELL\argonov.json'
-          if (-not (Test-Path -LiteralPath $terminalFragment -PathType Leaf)) { throw 'ARGONOV Windows Terminal profile fragment was not created.' }
-          $fragmentObject = Get-Content -LiteralPath $terminalFragment -Raw | ConvertFrom-Json
-          if (-not ($fragmentObject.profiles | Where-Object { $_.name -eq 'ARGONOV SHELL' })) { throw 'ARGONOV profile fragment is invalid.' }
+          $terminalLog = Join-Path $dependenciesRoot 'WindowsTerminal\argonov-dependency.json'
+          if (-not (Test-Path -LiteralPath $terminalLog -PathType Leaf)) { throw 'Portable Windows Terminal deployment manifest was not created.' }
+          $terminalMetadata = Get-Content -LiteralPath $terminalLog -Raw | ConvertFrom-Json
+          if ($terminalMetadata.Name -ne 'Windows Terminal' -or $terminalMetadata.ManagedBy -ne 'ARGONOV SHELL installer') { throw 'Portable Windows Terminal deployment manifest is invalid.' }
           $lhmLibrary = Join-Path $env:LOCALAPPDATA 'ARGONOV\tools\LibreHardwareMonitor\LibreHardwareMonitorLib.dll'
           if (-not (Test-Path -LiteralPath $lhmLibrary -PathType Leaf)) { throw 'LibreHardwareMonitor backend was not installed.' }
-          Write-Host 'Git, Python 3.14, qrcode/Pillow, Windows Terminal and sensor backend verified.' -ForegroundColor Green
+          if (-not (Test-Path -LiteralPath (Join-Path $target 'Launch-Argonov.cmd') -PathType Leaf)) { throw 'ARGONOV Windows Terminal launch entry point is missing.' }
+          Write-Host 'Git, Python 3.14, qrcode/Pillow, Windows Terminal deployment and sensor backend verified.' -ForegroundColor Green
 
           $keepFile = Join-Path $target 'music\uninstall-preservation-test.txt'
           New-Item -ItemType Directory -Path (Split-Path -Parent $keepFile) -Force | Out-Null
@@ -200,7 +201,6 @@ jobs:
           Remove-Item -LiteralPath $target -Recurse -Force
           Remove-Item -LiteralPath $dependenciesRoot -Recurse -Force -ErrorAction SilentlyContinue
           Remove-Item -LiteralPath (Join-Path $env:LOCALAPPDATA 'ARGONOV') -Recurse -Force -ErrorAction SilentlyContinue
-          Remove-Item -LiteralPath (Join-Path $env:LOCALAPPDATA 'Microsoft\Windows Terminal\Fragments\ARGONOV-SHELL') -Recurse -Force -ErrorAction SilentlyContinue
 
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
