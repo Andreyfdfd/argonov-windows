@@ -103,7 +103,7 @@ function Update-PowerShellProfile {
         return
     }
     if ($profileExists) {
-        $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+        $stamp = Get-Date -Format 'yyyyMMdd-HHmmss-fff'
         $backupPath = "$TargetProfile.argonov-backup-$stamp"
         [System.IO.File]::Copy($TargetProfile, $backupPath, $false)
         Write-Host "Profile backup: $backupPath" -ForegroundColor DarkGray
@@ -173,7 +173,7 @@ try {
         )
 
         if (Test-Path -LiteralPath $InstallRoot) {
-            $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+            $stamp = Get-Date -Format 'yyyyMMdd-HHmmss-fff'
             $backupRoot = "$InstallRoot.backup-$stamp"
             [System.IO.Directory]::Move($InstallRoot, $backupRoot)
             Write-Host "Previous installation backup: $backupRoot" -ForegroundColor DarkGray
