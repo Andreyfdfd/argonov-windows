@@ -1,1 +1,4 @@
 modules/system/sysinfo.ps1.pre-*.bak
+
+# Local installation state; never commit this marker
+.installed
