@@ -10,6 +10,7 @@ $launchPath = Join-Path $projectRoot 'Launch-Argonov.cmd'
 $dependencyCmdPath = Join-Path $projectRoot 'Install-ArgonovDependencies.cmd'
 $repairCmdPath = Join-Path $projectRoot 'Repair-ArgonovDependencies.cmd'
 $dependencyScriptPath = Join-Path $projectRoot 'setup\Install-ArgonovDependencies.ps1'
+$osintPath = Join-Path $projectRoot 'modules\osint\hacktool.ps1'
 $iss = [System.IO.File]::ReadAllText($issPath)
 $start = [System.IO.File]::ReadAllText($startPath)
 $cmd = [System.IO.File]::ReadAllText($cmdPath)
@@ -17,6 +18,7 @@ $launch = [System.IO.File]::ReadAllText($launchPath)
 $dependencyCmd = [System.IO.File]::ReadAllText($dependencyCmdPath)
 $repairCmd = [System.IO.File]::ReadAllText($repairCmdPath)
 $dependencyScript = [System.IO.File]::ReadAllText($dependencyScriptPath)
+$osintScript = [System.IO.File]::ReadAllText($osintPath)
 function Assert-PackageTest {
     param([bool]$Condition, [string]$Message)
     if (-not $Condition) { throw "PACKAGE TEST FAILED: $Message" }
@@ -51,6 +53,8 @@ Assert-PackageTest ($dependencyScript.Contains("Test-Path -LiteralPath (Join-Pat
 Assert-PackageTest (-not $dependencyScript.Contains("Join-Path `$stagingRoot 'etc\post-install')))")) 'PortableGit persistent post-install script directory is not incorrectly treated as a failure.'
 Assert-PackageTest ($dependencyScript.Contains('$bashVersion = (& $stagedBash --version')) 'PortableGit Bash is probed in addition to git.exe.'
 Assert-PackageTest ($dependencyScript.Contains('Invoke-VerifiedDownload')) 'External installers are SHA-256 verified before execution.'
+Assert-PackageTest ($osintScript.Contains('https://rdap.org/domain/')) 'WHOIS lookup has a built-in RDAP fallback without an external executable.'
+Assert-PackageTest ($osintScript.Contains('Get-Command whois.exe')) 'An existing WHOIS client remains supported when available.'
 Assert-PackageTest ($dependencyScript.Contains('qrcode[pil]')) 'Python QR dependencies are installed automatically.'
 Assert-PackageTest ($dependencyScript.Contains('PythonPackages')) 'Python packages are isolated in the shared ARGONOV dependency directory.'
 Assert-PackageTest ($dependencyScript.Contains('--target $pythonPackagesRoot')) 'pip installs into the managed packages folder instead of the user Python site.'
