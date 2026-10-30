@@ -8,12 +8,14 @@ $startPath = Join-Path $projectRoot 'Start-Argonov.ps1'
 $cmdPath = Join-Path $projectRoot 'Start-Argonov.cmd'
 $launchPath = Join-Path $projectRoot 'Launch-Argonov.cmd'
 $dependencyCmdPath = Join-Path $projectRoot 'Install-ArgonovDependencies.cmd'
+$repairCmdPath = Join-Path $projectRoot 'Repair-ArgonovDependencies.cmd'
 $dependencyScriptPath = Join-Path $projectRoot 'setup\Install-ArgonovDependencies.ps1'
 $iss = [System.IO.File]::ReadAllText($issPath)
 $start = [System.IO.File]::ReadAllText($startPath)
 $cmd = [System.IO.File]::ReadAllText($cmdPath)
 $launch = [System.IO.File]::ReadAllText($launchPath)
 $dependencyCmd = [System.IO.File]::ReadAllText($dependencyCmdPath)
+$repairCmd = [System.IO.File]::ReadAllText($repairCmdPath)
 $dependencyScript = [System.IO.File]::ReadAllText($dependencyScriptPath)
 function Assert-PackageTest {
     param([bool]$Condition, [string]$Message)
@@ -25,6 +27,7 @@ Assert-PackageTest (Test-Path -LiteralPath $startPath -PathType Leaf) 'PowerShel
 Assert-PackageTest (Test-Path -LiteralPath $cmdPath -PathType Leaf) 'Runtime bootstrap command exists.'
 Assert-PackageTest (Test-Path -LiteralPath $launchPath -PathType Leaf) 'Windows Terminal launcher exists.'
 Assert-PackageTest (Test-Path -LiteralPath $dependencyCmdPath -PathType Leaf) 'Dependency bootstrap command exists.'
+Assert-PackageTest (Test-Path -LiteralPath $repairCmdPath -PathType Leaf) 'Dependency repair command exists.'
 Assert-PackageTest (Test-Path -LiteralPath $dependencyScriptPath -PathType Leaf) 'Dependency bootstrap script exists.'
 Assert-PackageTest ($iss.Contains('PrivilegesRequired=lowest')) 'Installer does not request administrator privileges.'
 Assert-PackageTest ($iss.Contains('DefaultDirName={localappdata}\Programs\ARGONOV SHELL')) 'Default install path is user-scoped.'
@@ -54,5 +57,7 @@ Assert-PackageTest ($iss.Contains('DestDir: "{localappdata}\Programs\ARGONOV-Dep
 Assert-PackageTest ($iss.Contains('uninsneveruninstall')) 'Shared runtime files survive ARGONOV uninstallation.'
 Assert-PackageTest ($cmd.Contains('ARGONOV-Dependencies\PowerShell\pwsh.exe')) 'Shell launcher starts the persistent shared PowerShell runtime.'
 Assert-PackageTest ($dependencyCmd.Contains('ARGONOV-Dependencies\PowerShell\pwsh.exe')) 'Dependency setup is executed using the persistent shared PowerShell runtime.'
+Assert-PackageTest ($iss.Contains('Repair-ArgonovDependencies.cmd')) 'Start menu includes an automatic dependency repair option.'
+Assert-PackageTest ($repairCmd.Contains('-InstallGit -InstallPython -InstallTerminal -InstallSensors')) 'Repair command retries all selected prerequisite installations.'
 Assert-PackageTest ($dependencyScript.Contains("Add-UserPathEntry -Path `$sharedPowerShell")) 'Shared PowerShell is added to current-user PATH.'
 Write-Host 'PACKAGE DEFINITION TESTS PASSED' -ForegroundColor Green
