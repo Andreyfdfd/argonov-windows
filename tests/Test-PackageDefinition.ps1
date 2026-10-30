@@ -35,7 +35,7 @@ Assert-PackageTest ($iss.Contains('payload\powershell')) 'Installer includes the
 Assert-PackageTest ($iss.Contains('payload\dotnet')) 'Installer includes a private .NET runtime.'
 Assert-PackageTest ($iss.Contains('Start-Argonov.cmd')) 'Shortcuts use the runtime bootstrap command.'
 Assert-PackageTest ($cmd.Contains('DOTNET_ROOT_X64')) 'Bootstrap points .NET host resolution to the private runtime.'
-Assert-PackageTest ($launch.Contains('wt.exe -p')) 'Desktop launcher opens the ARGONOV profile in Windows Terminal.'
+Assert-PackageTest ($launch.Contains('wt.exe -d')) 'Desktop launcher opens a working-directory command tab in Windows Terminal.'
 Assert-PackageTest ($iss.Contains("WizardIsTaskSelected('installGit')")) 'Installer provides a Git dependency selection.'
 Assert-PackageTest ($iss.Contains("WizardIsTaskSelected('installPython')")) 'Installer provides a Python dependency selection.'
 Assert-PackageTest ($iss.Contains("WizardIsTaskSelected('installTerminal')")) 'Installer provides a Windows Terminal dependency selection.'
