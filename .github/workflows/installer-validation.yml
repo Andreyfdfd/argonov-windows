@@ -8,6 +8,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: argonov-installer-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   installer-tests-and-build:
     runs-on: windows-latest
