@@ -144,6 +144,15 @@ jobs:
           }
           $version = & $pwsh -NoLogo -NoProfile -Command '$PSVersionTable.PSVersion.ToString()'
           if ($LASTEXITCODE -ne 0 -or $version -ne '7.6.9') { throw "Installed PowerShell runtime failed: $version" }
+
+          $launchOutput = & $pwsh -NoLogo -NoProfile -File $launcher 2>&1
+          $launchExitCode = $LASTEXITCODE
+          if ($launchExitCode -ne 0) {
+            $launchOutput | ForEach-Object { Write-Host $_ }
+            throw "ARGONOV profile launch failed with exit code $launchExitCode."
+          }
+          Write-Host 'ARGONOV launcher started the profile successfully.' -ForegroundColor Green
+
           $keepFile = Join-Path $target 'music\uninstall-preservation-test.txt'
           New-Item -ItemType Directory -Path (Split-Path -Parent $keepFile) -Force | Out-Null
           Set-Content -LiteralPath $keepFile -Value 'USER_DATA_MUST_SURVIVE'
