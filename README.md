@@ -92,7 +92,7 @@ LM Studio and AI models are not bundled. AI commands require a separate LM Studi
 1. Download and run **ARGONOV-SHELL-Setup-x64.exe**.
 2. Select the optional components in the installer. Already available components are detected and reused.
 3. Keep the default selections to install Git for Windows (PortableGit), Python 3.14 with qrcode and Pillow, Windows Terminal, and the SYSINFO sensor backend.
-4. Complete installation. The Start menu shortcut opens ARGONOV SHELL in Windows Terminal when it is available; otherwise it opens the shared PowerShell console.
+4. Complete installation. The Start menu shortcut opens ARGONOV SHELL in a new Windows Terminal tab when it is available; otherwise it opens the shared PowerShell console.
 
 The installer includes PowerShell and .NET, verifies downloaded installers/archives with SHA-256 or SHA-512, does not change system-wide settings, and does not require administrator privileges.
 
