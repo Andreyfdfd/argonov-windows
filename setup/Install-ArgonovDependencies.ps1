@@ -537,12 +537,13 @@ function Install-ArgonovTerminal {
         throw 'Windows Terminal portable installation did not pass its executable checks.'
     }
 
-    $terminalVersion = (& $terminalExe --version 2>&1 | Out-String).Trim()
-    if ($LASTEXITCODE -ne 0) {
-        Write-DependencyLog "Windows Terminal executable version probe returned a non-zero code; files are present and hash-verified. Output: $terminalVersion" 'WARN'
-    } else {
-        Write-DependencyLog "Portable Windows Terminal executable probe: $terminalVersion" 'OK'
+    # WindowsTerminal.exe is a GUI application. Do not execute it during setup
+    # merely to read its version; inspect PE version metadata without opening a window.
+    $terminalVersion = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($terminalExe).FileVersion
+    if ([string]::IsNullOrWhiteSpace($terminalVersion)) {
+        $terminalVersion = [string]$release.tag_name
     }
+    Write-DependencyLog "Portable Windows Terminal file version: $terminalVersion (release $($release.tag_name)); archive SHA-256 verified." 'OK'
 
     $script:Results.WindowsTerminal = [ordered]@{
         Status = 'Installed'
