@@ -127,8 +127,11 @@ jobs:
         run: |
           $setup = (Resolve-Path 'dist\ARGONOV-SHELL-Setup-x64.exe').Path
           $target = Join-Path $env:RUNNER_TEMP 'ARGONOV-SMOKE-INSTALL'
+          $dependenciesRoot = Join-Path $env:RUNNER_TEMP 'ARGONOV-SMOKE-DEPS'
+          $env:ARGONOV_INSTALLER_TEST = '1'
+          $env:ARGONOV_DEPENDENCY_ROOT = $dependenciesRoot
           $log = Join-Path $env:RUNNER_TEMP 'argonov-setup-smoke.log'
-          $arguments = @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/SP-',"/DIR=$target","/LOG=$log")
+          $arguments = @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/SP-',"/DIR=$target","/LOG=$log",'/TASKS=installGit,installPython,installTerminal,installSensors,terminalDefault')
           $process = Start-Process -FilePath $setup -ArgumentList $arguments -Wait -PassThru
           if ($process.ExitCode -ne 0) { throw "Setup.exe exited with $($process.ExitCode)." }
           $pwsh = Join-Path $target 'runtime\pwsh.exe'
@@ -153,6 +156,22 @@ jobs:
           }
           Write-Host 'ARGONOV launcher started the profile successfully.' -ForegroundColor Green
 
+          $gitExe = Join-Path $dependenciesRoot 'Git\cmd\git.exe'
+          $pythonExe = Join-Path $dependenciesRoot 'Python314\python.exe'
+          $terminalExe = Join-Path $dependenciesRoot 'WindowsTerminal\WindowsTerminal.exe'
+          if (-not (Test-Path -LiteralPath $gitExe -PathType Leaf)) { throw 'Isolated Git dependency was not installed.' }
+          if (-not (Test-Path -LiteralPath $pythonExe -PathType Leaf)) { throw 'Isolated Python 3.14 dependency was not installed.' }
+          if (-not (Test-Path -LiteralPath $terminalExe -PathType Leaf)) { throw 'Portable Windows Terminal dependency was not installed.' }
+          & $pythonExe -c 'import qrcode; from PIL import Image'
+          if ($LASTEXITCODE -ne 0) { throw 'Python qrcode/Pillow package verification failed.' }
+          $terminalSettings = Join-Path $dependenciesRoot 'WindowsTerminal\settings\settings.json'
+          if (-not (Test-Path -LiteralPath $terminalSettings -PathType Leaf)) { throw 'ARGONOV Windows Terminal settings were not created.' }
+          $settingsObject = Get-Content -LiteralPath $terminalSettings -Raw | ConvertFrom-Json
+          if (-not ($settingsObject.profiles.list | Where-Object { $_.name -eq 'ARGONOV SHELL' })) { throw 'ARGONOV profile was not added to Windows Terminal.' }
+          $lhmLibrary = Join-Path $env:LOCALAPPDATA 'ARGONOV\tools\LibreHardwareMonitor\LibreHardwareMonitorLib.dll'
+          if (-not (Test-Path -LiteralPath $lhmLibrary -PathType Leaf)) { throw 'LibreHardwareMonitor backend was not installed.' }
+          Write-Host 'Git, Python 3.14, qrcode/Pillow, Windows Terminal and sensor backend verified.' -ForegroundColor Green
+
           $keepFile = Join-Path $target 'music\uninstall-preservation-test.txt'
           New-Item -ItemType Directory -Path (Split-Path -Parent $keepFile) -Force | Out-Null
           Set-Content -LiteralPath $keepFile -Value 'USER_DATA_MUST_SURVIVE'
@@ -162,8 +181,13 @@ jobs:
           if ($uninstall.ExitCode -ne 0) { throw "Uninstaller exited with $($uninstall.ExitCode)." }
           if (-not (Test-Path -LiteralPath $keepFile -PathType Leaf)) { throw 'User data was removed by uninstaller.' }
           if (Test-Path -LiteralPath $pwsh -PathType Leaf) { throw 'PowerShell runtime remains after uninstall.' }
-          Write-Host 'Setup install/uninstall smoke test passed; user data was preserved.' -ForegroundColor Green
+          if (-not (Test-Path -LiteralPath $gitExe -PathType Leaf)) { throw 'Shared Git dependency was removed during shell uninstall.' }
+          if (-not (Test-Path -LiteralPath $pythonExe -PathType Leaf)) { throw 'Shared Python dependency was removed during shell uninstall.' }
+          if (-not (Test-Path -LiteralPath $terminalExe -PathType Leaf)) { throw 'Shared Windows Terminal dependency was removed during shell uninstall.' }
+          Write-Host 'Setup install/uninstall smoke test passed; shell was removed and shared dependencies/user data were preserved.' -ForegroundColor Green
           Remove-Item -LiteralPath $target -Recurse -Force
+          Remove-Item -LiteralPath $dependenciesRoot -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item -LiteralPath (Join-Path $env:LOCALAPPDATA 'ARGONOV') -Recurse -Force -ErrorAction SilentlyContinue
 
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
