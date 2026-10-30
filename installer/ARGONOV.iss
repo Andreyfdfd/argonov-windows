@@ -46,6 +46,8 @@ Name: "{app}\config"; Flags: uninsneveruninstall
 
 [Files]
 Source: "..\payload\powershell\*"; DestDir: "{app}\runtime"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\payload\dotnet\*"; DestDir: "{app}\dotnet"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\Start-Argonov.cmd"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\modules\*"; DestDir: "{app}\modules"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\profile.ps1"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\Start-Argonov.ps1"; DestDir: "{app}"; Flags: ignoreversion
@@ -53,8 +55,8 @@ Source: "..\README.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\docs\*"; DestDir: "{app}\docs"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{autoprograms}\ARGONOV SHELL"; Filename: "{app}\{#AppExeName}"; Parameters: "-NoLogo -NoExit -File ""{app}\Start-Argonov.ps1"""; WorkingDir: "{app}"
-Name: "{autodesktop}\ARGONOV SHELL"; Filename: "{app}\{#AppExeName}"; Parameters: "-NoLogo -NoExit -File ""{app}\Start-Argonov.ps1"""; WorkingDir: "{app}"; Tasks: desktopicon
+Name: "{autoprograms}\ARGONOV SHELL"; Filename: "{app}\Start-Argonov.cmd"; WorkingDir: "{app}"
+Name: "{autodesktop}\ARGONOV SHELL"; Filename: "{app}\Start-Argonov.cmd"; WorkingDir: "{app}"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\{#AppExeName}"; Parameters: "-NoLogo -NoExit -File ""{app}\Start-Argonov.ps1"""; Description: "Запустить ARGONOV SHELL"; Flags: postinstall nowait skipifsilent
+Filename: "{app}\Start-Argonov.cmd"; Description: "Запустить ARGONOV SHELL"; Flags: postinstall nowait skipifsilent
