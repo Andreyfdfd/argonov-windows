@@ -1556,14 +1556,13 @@ function Install-ArgonovSysInfoSensorBackend {
         Move-Item -LiteralPath $stagingPath -Destination $script:ARGONOV_SYSINFO_LHM_DIR -ErrorAction Stop
         Write-Host '  Установка завершена, SHA-256 проверен.' -ForegroundColor Green
         Write-Host '  ARGONOV загружает библиотеку внутри PowerShell; отдельное GUI-окно не запускается.' -ForegroundColor Gray
-        Write-Host '  Проверяю доступность датчиков...' -ForegroundColor Yellow
-        $sensorResult = Get-ArgonovSysInfoSensors
-        if ($sensorResult.Available) {
-            Write-Host ('  Доступно датчиков: {0}' -f @($sensorResult.Items).Count) -ForegroundColor Green
-        } else {
-            Write-Host ('  Библиотека установлена, но показания пока недоступны: {0}' -f $sensorResult.Message) -ForegroundColor Yellow
-            Write-Host '  Некоторые датчики требуют прав администратора или не поддерживаются устройством.' -ForegroundColor DarkGray
+        Write-Host '  Проверяю загрузку .NET-библиотеки...' -ForegroundColor Yellow
+        Initialize-ArgonovSysInfoLhmAssembly
+        if (-not ('LibreHardwareMonitor.Hardware.Computer' -as [type])) {
+            throw 'LibreHardwareMonitor assembly was copied, but its main type could not be loaded.'
         }
+        Write-Host '  .NET-библиотека успешно загружена.' -ForegroundColor Green
+        Write-Host '  Опрос конкретных датчиков будет выполнен командой sysinfo; он зависит от оборудования и прав Windows.' -ForegroundColor DarkGray
         return
     } catch {
         if ($oldBackup -and (Test-Path -LiteralPath $oldBackup) -and -not (Test-Path -LiteralPath $script:ARGONOV_SYSINFO_LHM_DIR)) {
