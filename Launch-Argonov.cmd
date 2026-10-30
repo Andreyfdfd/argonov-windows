@@ -6,6 +6,10 @@ if not errorlevel 1 (
     wt.exe -p "ARGONOV SHELL"
     if not errorlevel 1 exit /b 0
 )
+if exist "%LOCALAPPDATA%\Microsoft\WindowsApps\wt.exe" (
+    start "" "%LOCALAPPDATA%\Microsoft\WindowsApps\wt.exe" -p "ARGONOV SHELL"
+    exit /b 0
+)
 if exist "%ARGONOV_DEPENDENCY_ROOT%\WindowsTerminal\wt.exe" (
     start "" "%ARGONOV_DEPENDENCY_ROOT%\WindowsTerminal\wt.exe" -p "ARGONOV SHELL"
     exit /b 0
