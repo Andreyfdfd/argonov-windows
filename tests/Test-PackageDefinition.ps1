@@ -43,6 +43,7 @@ Assert-PackageTest ($dependencyScript.Contains('Microsoft\Windows Terminal\Fragm
 Assert-PackageTest (-not $dependencyScript.Contains('Get-Content -LiteralPath $settingsPath')) 'Windows Terminal user settings are not rewritten by the installer.'
 Assert-PackageTest ($iss.Contains("WizardIsTaskSelected('installSensors')")) 'Installer provides a sensor backend selection.'
 Assert-PackageTest ($dependencyScript.Contains('Get-GitHubLatestRelease')) 'Dependency bootstrap retrieves maintained GitHub releases.'
+Assert-PackageTest ($dependencyScript.Contains('PortableGit-.+-64-bit')) 'Git is deployed from the official portable distribution without admin installation.'
 Assert-PackageTest ($dependencyScript.Contains('Invoke-VerifiedDownload')) 'External installers are SHA-256 verified before execution.'
 Assert-PackageTest ($dependencyScript.Contains('qrcode[pil]')) 'Python QR dependencies are installed automatically.'
 Assert-PackageTest ($dependencyScript.Contains('LibreHardwareMonitor')) 'SYSINFO sensor backend is installed automatically.'
