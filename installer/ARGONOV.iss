@@ -1,11 +1,17 @@
 ; ARGONOV SHELL - per-user installer
-#define AppName "ARGONOV SHELL"
+#if Defined(ArgonovTestBuild)
+  #define AppName "ARGONOV SHELL (TEST)"
+  #define AppId "{{D0B3A83A-6F4B-4F6A-9D51-9A0A8E7D2C41}"
+#else
+  #define AppName "ARGONOV SHELL"
+  #define AppId "{{F62C96D2-2A2B-4F69-9F31-4DAA9F9F78D2}"
+#endif
 #define AppVersion "0.1.0"
 #define AppPublisher "Andreyfdfd"
 #define AppExeName "PowerShell\pwsh.exe"
 
 [Setup]
-AppId={{F62C96D2-2A2B-4F69-9F31-4DAA9F9F78D2}
+AppId={#AppId}
 AppName={#AppName}
 AppVersion={#AppVersion}
 AppPublisher={#AppPublisher}
