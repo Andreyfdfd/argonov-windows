@@ -38,7 +38,7 @@
 
 **EN:** ARGONOV SHELL is a personal shell environment for Windows built on top of **PowerShell 7**. It transforms a terminal session into a toolbox for development, automation, AI assistance, OSINT research, and engineering tasks. The ARGONOV Start menu shortcut opens it in a new Windows Terminal tab, or in the shared PowerShell console when Windows Terminal is unavailable.
 
-**RU:** ARGONOV SHELL — персональная оболочка для Windows 11, построенная поверх **PowerShell 7**. Превращает стандартный терминал в полноценный инструментарий для разработки, автоматизации, AI-ассистента, OSINT-исследований и инженерных задач. Оболочка загружается автоматически при открытии Windows Terminal.
+**RU:** ARGONOV SHELL — персональная оболочка для Windows 10/11, построенная поверх **PowerShell 7**. Превращает терминал в инструмент для разработки, автоматизации, AI-ассистента, OSINT-исследований и инженерных задач. Ярлык ARGONOV в меню «Пуск» открывает оболочку в новой вкладке Windows Terminal; если он недоступен, используется отдельная консоль PowerShell.
 
 **Status / Статус:** Personal project, actively developed. 108 command catalog entries across 22 PowerShell module files in 8 module folders. / Персональный проект, активно развивается. 108 записей в каталоге команд, 22 PowerShell-модуля в 8 папках.
 
