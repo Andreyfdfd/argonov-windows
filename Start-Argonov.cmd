@@ -16,5 +16,5 @@ if exist "%ARGONOV_DEPENDENCY_ROOT%\Git\usr\bin\ssh.exe" set "GIT_SSH=%ARGONOV_D
 if exist "%ARGONOV_DEPENDENCY_ROOT%\Python314" set "PATH=%ARGONOV_DEPENDENCY_ROOT%\Python314;%ARGONOV_DEPENDENCY_ROOT%\Python314\Scripts;%PATH%"
 if exist "%ARGONOV_DEPENDENCY_ROOT%\PythonPackages" set "PYTHONPATH=%ARGONOV_DEPENDENCY_ROOT%\PythonPackages;%PYTHONPATH%"
 if exist "%LOCALAPPDATA%\Programs\Python\Launcher" set "PATH=%LOCALAPPDATA%\Programs\Python\Launcher;%PATH%"
-"%ARGONOV_PWSH%" -NoLogo -NoProfile -NoExit -File "%~dp0Start-Argonov.ps1" %*
+"%ARGONOV_PWSH%" -NoLogo -NoProfile -ExecutionPolicy Bypass -NoExit -File "%~dp0Start-Argonov.ps1" %*
 exit /b %ERRORLEVEL%
