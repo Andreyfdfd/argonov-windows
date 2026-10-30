@@ -221,21 +221,27 @@ function Install-ArgonovGit {
             (Join-Path $stagingRoot 'ucrt64\bin\ssh.exe')
         )
         $stagedSsh = $sshCandidates | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1
-        if (-not $stagedSsh) {
-            throw 'MinGit archive did not include an OpenSSH client. Git was not accepted as fully configured.'
+        if ($stagedSsh) {
+            $sshVersion = (& $stagedSsh -V 2>&1 | Out-String).Trim()
+            if ($LASTEXITCODE -ne 0 -or $sshVersion -notmatch 'OpenSSH') {
+                throw "MinGit OpenSSH client probe failed: $sshVersion"
+            }
+            Write-DependencyLog "$sshVersion verified in the MinGit archive." 'OK'
+        } else {
+            Write-DependencyLog 'MinGit has no bundled OpenSSH client. Git HTTPS transport remains available; native Windows OpenSSH will be used automatically if present.' 'WARN'
         }
 
         $gitVersion = (& $stagedGitExe --version 2>&1 | Out-String).Trim()
         if ($LASTEXITCODE -ne 0 -or $gitVersion -notmatch '\.windows\.\d+$') {
             throw "MinGit Git version probe failed: $gitVersion"
         }
-        $sshVersion = (& $stagedSsh -V 2>&1 | Out-String).Trim()
-        if ($LASTEXITCODE -ne 0 -or $sshVersion -notmatch 'OpenSSH') {
-            throw "MinGit OpenSSH client probe failed: $sshVersion"
-        }
-        Write-DependencyLog "$gitVersion; $sshVersion verified." 'OK'
+        Write-DependencyLog "$gitVersion verified." 'OK'
 
-        $sshRelativePath = [System.IO.Path]::GetRelativePath($stagingRoot, $stagedSsh)
+        $sshRelativePath = if ($stagedSsh) {
+            [System.IO.Path]::GetRelativePath($stagingRoot, $stagedSsh)
+        } else {
+            $null
+        }
         $meta = [ordered]@{
             Name = 'MinGit'
             Version = $release.tag_name
@@ -283,18 +289,23 @@ function Install-ArgonovGit {
         (Join-Path $managedGit 'ucrt64\bin\ssh.exe')
     )
     $managedSsh = $managedSshCandidates | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1
-    if (-not $managedSsh) {
-        throw 'MinGit OpenSSH client is missing after installation.'
-    }
+    $nativeSsh = Join-Path $env:WINDIR 'System32\OpenSSH\ssh.exe'
+    $sshPath = if ($managedSsh) { $managedSsh } elseif (Test-Path -LiteralPath $nativeSsh -PathType Leaf) { $nativeSsh } else { $null }
 
     $script:Results.Git = [ordered]@{
         Status = 'Installed'
         Version = $version
         Path = $managedGitExe
-        SshPath = $managedSsh
+        SshPath = $sshPath
+        SshAvailable = [bool]$sshPath
         Flavor = 'MinGit'
     }
-    Write-DependencyLog "$version (MinGit) and bundled OpenSSH client verified." 'OK'
+    Write-DependencyLog "$version (MinGit) verified." 'OK'
+    if ($sshPath) {
+        Write-DependencyLog "SSH transport available through $sshPath." 'OK'
+    } else {
+        Write-DependencyLog 'No OpenSSH executable was detected. Git HTTPS transport remains fully available; SSH transport can be enabled later.' 'WARN'
+    }
 }
 
 function Get-Python314 {
