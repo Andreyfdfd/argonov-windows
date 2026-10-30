@@ -71,7 +71,7 @@
 | **Architecture** / Архитектура | x64 | Current Setup.exe build / Текущая сборка установщика |
 | **PowerShell** | 7.6.9 (bundled) | Shell runtime / Среда выполнения |
 | **.NET Runtime** | 10.x (bundled) | PowerShell runtime / Среда выполнения PowerShell |
-| **Git for Windows** | Current stable PortableGit (optional task) | Git aliases and repository commands / Git-алиасы и команды работы с репозиториями |
+| **Git for Windows** | Current stable MinGit ZIP (optional task) | Git aliases and repository commands / Git-алиасы и команды работы с репозиториями |
 | **Python** | 3.14 (optional task) | QR generation and Python scripts / Генерация QR и Python-скрипты |
 | **Windows Terminal** | Current stable portable or existing package | Terminal host / Терминал |
 | **LibreHardwareMonitor** | Current compatible release (optional task) | Hardware sensors in SYSINFO / Датчики в SYSINFO |
@@ -91,7 +91,7 @@ LM Studio and AI models are not bundled. AI commands require a separate LM Studi
 
 1. Download and run **ARGONOV-SHELL-Setup-x64.exe**.
 2. Select the optional components in the installer. Already available components are detected and reused.
-3. Keep the default selections to install Git for Windows (PortableGit), Python 3.14 with qrcode and Pillow, Windows Terminal, and the SYSINFO sensor backend.
+3. Keep the default selections to install Git for Windows (MinGit), Python 3.14 with qrcode and Pillow, Windows Terminal, and the SYSINFO sensor backend.
 4. Complete installation. The Start menu shortcut opens ARGONOV SHELL in a new Windows Terminal tab when it is available; otherwise it opens the shared PowerShell console.
 
 The installer includes PowerShell and .NET, verifies downloaded installers/archives with SHA-256 or SHA-512, does not change system-wide settings, and does not require administrator privileges.
