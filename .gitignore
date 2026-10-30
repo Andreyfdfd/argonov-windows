@@ -1,1 +1,5 @@
 modules/system/sysinfo.ps1.pre-*.bak
+
+# Generated installer payload and build output
+payload/
+dist/
