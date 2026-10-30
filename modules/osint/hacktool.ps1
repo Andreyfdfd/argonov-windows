@@ -269,7 +269,11 @@ function hack-qr {
         return
     }
 
-    # qrcode + Pillow are installed by the ARGONOV dependency bootstrap.
+    # Load QR packages from the isolated ARGONOV dependency directory.
+    $pythonPackagesRoot = Join-Path $dependencyRoot 'PythonPackages'
+    if (Test-Path -LiteralPath $pythonPackagesRoot -PathType Container) {
+        $env:PYTHONPATH = if ($env:PYTHONPATH) { "$pythonPackagesRoot;$env:PYTHONPATH" } else { $pythonPackagesRoot }
+    }
     & $pythonExe @pythonArgs -c "import qrcode; from PIL import Image" 2>&1 | Out-Null
     if ($LASTEXITCODE -ne 0) {
         Write-Host "  Модули qrcode/Pillow не установлены. Повтори установку компонента Python через ARGONOV Setup." -ForegroundColor Yellow
