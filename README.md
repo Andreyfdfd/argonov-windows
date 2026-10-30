@@ -67,48 +67,63 @@
 
 | Component / Компонент | Version / Версия | Purpose / Назначение |
 |---|---|---|
-| **Windows** | 10 or 11 | OS / ОС |
-| **PowerShell** | 7.6+ | Shell runtime / Среда выполнения |
-| **Git** | Any recent | Repo management / Работа с репозиторием |
-| **SSH key** / SSH-ключ | ED25519 | GitHub without password / GitHub без пароля |
-| **LM Studio** | Latest | AI backend (optional) / Backend для AI (опционально) |
-| **Python** | 3.14 | Scripts (optional) / Скрипты (опционально) |
+| **Windows** | Windows 10 build 19041+ / Windows 11 | OS / ОС |
+| **Architecture** / Архитектура | x64 | Current Setup.exe build / Текущая сборка установщика |
+| **PowerShell** | 7.6.9 (bundled) | Shell runtime / Среда выполнения |
+| **.NET Runtime** | 10.x (bundled) | PowerShell runtime / Среда выполнения PowerShell |
+| **Git for Windows** | Current stable PortableGit (optional task) | Git aliases and repository commands / Git-алиасы и команды работы с репозиториями |
+| **Python** | 3.14 (optional task) | QR generation and Python scripts / Генерация QR и Python-скрипты |
+| **Windows Terminal** | Current stable portable or existing package | Terminal host / Терминал |
+| **LibreHardwareMonitor** | Current compatible release (optional task) | Hardware sensors in SYSINFO / Датчики в SYSINFO |
+| **LM Studio** | Latest (optional, separate install) | Local AI backend / Локальный AI-бэкенд |
 
-> 💡 **EN:** ARGONOV SHELL works without LM Studio — everything except `ai` commands.
-> **RU:** ARGONOV SHELL работает без LM Studio — всё, кроме команд `ai`.
+> **RU:** PowerShell 7.6.9 и .NET Runtime 10.x входят в установочный пакет. Предварительно устанавливать PowerShell, .NET, Git или Python не требуется. Установщик предлагает недостающие дополнительные компоненты и устанавливает их в пользовательский каталог без прав администратора.
+>
+> **EN:** PowerShell 7.6.9 and .NET Runtime 10.x are bundled. You do not need to preinstall PowerShell, .NET, Git, or Python. The installer offers missing optional components and deploys them per-user without administrator privileges.
+
+LM Studio and AI models are not bundled. AI commands require a separate LM Studio installation and a model downloaded by the user. SSH keys are never generated automatically; HTTPS Git remotes work without an SSH key.
 
 ---
 
 ## Installation / Установка
 
-### Option 1 / Вариант 1 — Clone from GitHub / Клонирование
+### Recommended / Рекомендуемый способ — Setup.exe
 
-```powershell
-git clone git@github.com:Andreyfdfd/argonov-windows.git C:\ARGONOV
+1. Download and run **ARGONOV-SHELL-Setup-x64.exe**.
+2. Select the optional components in the installer. Already available components are detected and reused.
+3. Keep the default selections to install Git for Windows (PortableGit), Python 3.14 with qrcode and Pillow, Windows Terminal, and the SYSINFO sensor backend.
+4. Complete installation. The Start menu shortcut opens ARGONOV SHELL in Windows Terminal when it is available; otherwise it opens the shared PowerShell console.
 
-if (-not (Test-Path $PROFILE)) {
-    New-Item -ItemType File -Path $PROFILE -Force | Out-Null
-}
-Add-Content -Path $PROFILE -Value '. C:\ARGONOV\profile.ps1' -Encoding UTF8
-```
+The installer includes PowerShell and .NET, verifies downloaded installers/archives with SHA-256 or SHA-512, does not change system-wide settings, and does not require administrator privileges.
 
-**EN:** Restart Windows Terminal. Done.
-**RU:** Перезапустить Windows Terminal. Готово.
+Shared runtimes and tools are stored separately from the shell in:
 
-### Option 2 / Вариант 2 — Installer / Установщик
+    %LOCALAPPDATA%\Programs\ARGONOV-Dependencies
 
-```powershell
-pwsh -ExecutionPolicy Bypass -File C:\ARGONOV\install.ps1
-```
+This is intentional: the future ARGONOV uninstaller will be able to remove the shell while leaving PowerShell, .NET, Git, Python, and Windows Terminal installed.
 
-**EN:** The installer checks PowerShell 7, Python, Git, SSH key, LM Studio, project structure, profile connection, and all module syntax.
-**RU:** Установщик проверяет PowerShell 7, Python, Git, SSH-ключ, LM Studio, структуру проекта, подключение профиля и синтаксис всех модулей.
+### Repair dependencies / Восстановление зависимостей
 
-### Optional / Опционально — Enable script execution / Разрешить скрипты
+Use **Start → ARGONOV SHELL → Repair dependencies** to retry installation or repair Git, Python, Windows Terminal, and LibreHardwareMonitor without reinstalling the shell.
 
-```powershell
-Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force
-```
+Installer logs and the dependency report are stored in:
+
+    %LOCALAPPDATA%\ARGONOV\installer\
+
+### Architecture note / Примечание об архитектуре
+
+The current Setup.exe supports **Windows x64**. A separate ARM64 build is planned; do not run this x64 package on Windows ARM64 devices.
+
+Windows Terminal portable mode requires Windows 10 build 19041 or later. On older Windows builds the shell can still be launched directly through PowerShell, but the Windows Terminal component cannot be deployed by this installer.
+
+### Developer installation / Ручная установка для разработчиков
+
+For development and manual testing, clone the repository and run the installer script from PowerShell 7.6+:
+
+    git clone https://github.com/Andreyfdfd/argonov-windows.git
+    pwsh -NoProfile -File .\argonov-windows\install.ps1
+
+The project installer validates PowerShell syntax, copies the shell to the per-user application directory, backs up an existing installation, and adds a managed block to the selected PowerShell profile. This developer path is separate from the packaged Setup.exe workflow.
 
 ---
 
