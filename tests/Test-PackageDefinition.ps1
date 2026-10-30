@@ -23,6 +23,7 @@ Assert-PackageTest ($iss.Contains('payload\powershell')) 'Installer includes the
 Assert-PackageTest ($iss.Contains('payload\dotnet')) 'Installer includes a private .NET runtime.'
 Assert-PackageTest ($iss.Contains('Start-Argonov.cmd')) 'Shortcuts use the runtime bootstrap command.'
 Assert-PackageTest ($cmd.Contains('DOTNET_ROOT_X64')) 'Bootstrap points .NET host resolution to the private runtime.'
+Assert-PackageTest ($cmd.Contains('-NoProfile')) 'Dedicated shell launch does not load the user PowerShell profile first.'
 Assert-PackageTest ($iss.Contains('uninsneveruninstall')) 'User data directories are preserved by uninstall.'
 Assert-PackageTest (-not $iss.Contains('$PROFILE')) 'Installer definition does not edit the current PowerShell profile.'
 $launcherRuntimePattern = 'Join-Path $PSScriptRoot ''runtime\pwsh.exe'''
