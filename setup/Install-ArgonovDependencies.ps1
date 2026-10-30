@@ -179,38 +179,103 @@ function Install-ArgonovGit {
         }
         if (Test-Path -LiteralPath $managedGitExe -PathType Leaf) {
             Add-UserPathEntry -Path (Join-Path $managedGit 'cmd')
+            Add-UserPathEntry -Path (Join-Path $managedGit 'usr\bin')
             $version = (& $managedGitExe --version 2>$null | Out-String).Trim()
             if ($LASTEXITCODE -eq 0 -and $version -match '^git version ') {
                 $script:Results.Git = [ordered]@{ Status = 'Existing'; Version = $version; Path = $managedGitExe }
-                Write-DependencyLog "Managed Git already available: $version." 'OK'
+                Write-DependencyLog "Managed PortableGit already available: $version." 'OK'
                 return
             }
         }
     }
 
     $release = Get-GitHubLatestRelease -Repository 'git-for-windows/git'
-    $asset = $release.assets | Where-Object { $_.name -match '^Git-.+-64-bit\.exe$' } | Select-Object -First 1
+    $asset = $release.assets | Where-Object { $_.name -match '^PortableGit-.+-64-bit\.7z\.exe$' } | Select-Object -First 1
     if (-not $asset -or -not $asset.browser_download_url) {
-        throw 'Latest Git for Windows x64 installer was not found.'
+        throw 'Latest PortableGit x64 self-extracting archive was not found.'
     }
-    $gitDigestMatch = [regex]::Match([string]$asset.digest, '^sha256:(?<hash>[0-9a-fA-F]{64})$')
-    if (-not $gitDigestMatch.Success) { throw 'GitHub release did not provide a SHA-256 digest for Git installer.' }
-    $gitHash = $gitDigestMatch.Groups['hash'].Value
-    Invoke-VerifiedDownload -Uri $asset.browser_download_url -Destination $installer -ExpectedSha256 $gitHash -Label "Git for Windows $($release.tag_name)" | Out-Null
+    $digestMatch = [regex]::Match([string]$asset.digest, '^sha256:(?<hash>[0-9a-fA-F]{64})$')
+    if (-not $digestMatch.Success) {
+        throw 'GitHub release did not provide a SHA-256 digest for PortableGit.'
+    }
+    $portableGitHash = $digestMatch.Groups['hash'].Value
+    $archive = Join-Path $env:TEMP $asset.name
+    Invoke-VerifiedDownload -Uri $asset.browser_download_url -Destination $archive -ExpectedSha256 $portableGitHash -Label "PortableGit $($release.tag_name)" | Out-Null
 
-    $arguments = @('/VERYSILENT','/NORESTART','/NOCANCEL','/SP-',"/DIR=$managedGit")
-    Invoke-ExternalInstaller -FilePath $installer -ArgumentList $arguments -Label 'Git for Windows'
+    $parent = Split-Path -Parent $managedGit
+    New-Item -ItemType Directory -Path $parent -Force | Out-Null
+    $stagingRoot = "$managedGit.staging-$([guid]::NewGuid().ToString('N'))"
+    New-Item -ItemType Directory -Path $stagingRoot -Force | Out-Null
+    try {
+        # Git for Windows documents -y -gm2 -InstallPath=... for headless
+        # extraction of PortableGit's signed-by-release-digest 7-Zip SFX.
+        $escapedInstallPath = $stagingRoot.Replace('\','\\')
+        $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
+        $startInfo.FileName = $archive
+        $startInfo.Arguments = '-y -gm2 -InstallPath="' + $escapedInstallPath + '"'
+        $startInfo.UseShellExecute = $false
+        $startInfo.CreateNoWindow = $true
+        Write-DependencyLog "Extracting PortableGit $($release.tag_name) into the per-user dependency directory..."
+        $process = [System.Diagnostics.Process]::Start($startInfo)
+        if (-not $process) { throw 'Could not start the PortableGit self-extracting archive.' }
+        try {
+            $process.WaitForExit()
+            $code = $process.ExitCode
+        } finally {
+            $process.Dispose()
+        }
+        if ($code -ne 0) { throw "PortableGit extraction returned exit code $code." }
+
+        $stagedGitExe = Join-Path $stagingRoot 'cmd\git.exe'
+        if (-not (Test-Path -LiteralPath $stagedGitExe -PathType Leaf)) {
+            throw 'PortableGit extraction completed, but cmd\git.exe was not created.'
+        }
+        $stagedSsh = Join-Path $stagingRoot 'usr\bin\ssh.exe'
+        if (-not (Test-Path -LiteralPath $stagedSsh -PathType Leaf)) {
+            throw 'PortableGit extraction completed, but its OpenSSH client was not found.'
+        }
+        $meta = [ordered]@{
+            Name = 'PortableGit'
+            Version = $release.tag_name
+            Source = $asset.browser_download_url
+            SHA256 = $portableGitHash
+            ManagedBy = 'ARGONOV SHELL installer'
+            InstalledAt = (Get-Date).ToString('o')
+        }
+        $meta | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $stagingRoot 'argonov-dependency.json') -Encoding utf8
+
+        if (Test-Path -LiteralPath $managedGit) {
+            $backup = "$managedGit.backup-$([guid]::NewGuid().ToString('N'))"
+            Move-Item -LiteralPath $managedGit -Destination $backup
+            try {
+                Move-Item -LiteralPath $stagingRoot -Destination $managedGit
+                Remove-Item -LiteralPath $backup -Recurse -Force
+            } catch {
+                if (-not (Test-Path -LiteralPath $managedGit)) {
+                    Move-Item -LiteralPath $backup -Destination $managedGit
+                }
+                throw
+            }
+        } else {
+            Move-Item -LiteralPath $stagingRoot -Destination $managedGit
+        }
+    } finally {
+        if (Test-Path -LiteralPath $stagingRoot) {
+            Remove-Item -LiteralPath $stagingRoot -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
     if (-not (Test-Path -LiteralPath $managedGitExe -PathType Leaf)) {
-        throw 'Git installation finished, but cmd\git.exe was not found.'
+        throw 'PortableGit was not installed correctly.'
     }
     Add-UserPathEntry -Path (Join-Path $managedGit 'cmd')
-
+    Add-UserPathEntry -Path (Join-Path $managedGit 'usr\bin')
     $version = (& $managedGitExe --version 2>$null | Out-String).Trim()
     if ($LASTEXITCODE -ne 0 -or $version -notmatch '^git version ') {
-        throw 'Git verification failed after installation.'
+        throw 'PortableGit verification failed after extraction.'
     }
-    $script:Results.Git = [ordered]@{ Status = 'Installed'; Version = $version; Path = $managedGitExe }
-    Write-DependencyLog "Git verified: $version." 'OK'
+    $script:Results.Git = [ordered]@{ Status = 'Installed'; Version = $version; Path = $managedGitExe; Flavor = 'PortableGit' }
+    Write-DependencyLog "$version (PortableGit) and OpenSSH client verified." 'OK'
 }
 
 function Get-Python314 {
