@@ -33,11 +33,7 @@ The installer wizard offers these default-selected tasks. The dependency bootstr
 
 The Git and Windows Terminal archives are downloaded from their official project release channels and checked against the SHA-256 digest published with the release. Python's installer hash is pinned to the official Python 3.14.10 x64 distribution. The .NET runtime archive is checked against the SHA-512 published in Microsoft's release metadata.
 
-The Windows Terminal profile is registered using the documented per-user JSON fragment extension directory:
-
-    %LOCALAPPDATA%\Microsoft\Windows Terminal\Fragments\ARGONOV-SHELL\argonov.json
-
-The installer does not rewrite the user's settings.json, so existing Terminal themes, profiles, shortcuts and comments are not replaced. The ARGONOV Start menu shortcut explicitly opens the ARGONOV profile.
+The installer does not rewrite the user's settings.json or register an AppX extension. The Start menu launcher opens a new Windows Terminal tab and runs Start-Argonov.cmd directly. This works with an existing Store/unpackaged Terminal and with the ARGONOV-managed portable copy while leaving the user's profiles, themes, shortcuts and comments untouched.
 
 ## Optional integrations that remain user-managed
 
