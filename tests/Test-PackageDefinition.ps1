@@ -27,5 +27,5 @@ Assert-PackageTest ($iss.Contains('uninsneveruninstall')) 'User data directories
 Assert-PackageTest (-not $iss.Contains('$PROFILE')) 'Installer definition does not edit the current PowerShell profile.'
 $launcherRuntimePattern = 'Join-Path $PSScriptRoot ''runtime\pwsh.exe'''
 Assert-PackageTest ($start.Contains($launcherRuntimePattern)) 'Launcher uses the bundled PowerShell runtime.'
-Assert-PackageTest ($start.Contains('. $profile')) 'Launcher loads ARGONOV profile explicitly.'
+Assert-PackageTest ($start.Contains('. $argonovProfile')) 'Launcher loads ARGONOV profile explicitly.'
 Write-Host 'PACKAGE DEFINITION TESTS PASSED' -ForegroundColor Green
