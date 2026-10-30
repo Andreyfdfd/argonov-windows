@@ -245,18 +245,34 @@ function hack-qr {
         return
     }
 
-    # Проверка Python
-    $py = Get-Command py -ErrorAction SilentlyContinue
-    if (-not $py) {
-        Write-Host "  Python не найден" -ForegroundColor Red
+    # Prefer the interpreter installed and verified by the ARGONOV bootstrap.
+    $dependencyRoot = if ($env:ARGONOV_DEPENDENCY_ROOT) {
+        $env:ARGONOV_DEPENDENCY_ROOT
+    } else {
+        Join-Path $env:LOCALAPPDATA 'Programs\ARGONOV-Dependencies'
+    }
+    $pythonExe = Join-Path $dependencyRoot 'Python314\python.exe'
+    if (-not (Test-Path -LiteralPath $pythonExe -PathType Leaf)) {
+        $launcher = Get-Command py.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($launcher) {
+            $pythonExe = $launcher.Source
+            $pythonArgs = @('-3.14')
+        } else {
+            $pythonExe = Get-Command python.exe -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -First 1
+            $pythonArgs = @()
+        }
+    } else {
+        $pythonArgs = @()
+    }
+    if (-not $pythonExe -or -not (Test-Path -LiteralPath $pythonExe -PathType Leaf)) {
+        Write-Host "  Python 3.14 не найден. Повтори установку компонента Python через ARGONOV Setup." -ForegroundColor Red
         return
     }
 
-    # Проверка библиотеки qrcode
-    $check = & py -3.14 -c "import qrcode" 2>&1
+    # qrcode + Pillow are installed by the ARGONOV dependency bootstrap.
+    & $pythonExe @pythonArgs -c "import qrcode; from PIL import Image" 2>&1 | Out-Null
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "  Библиотека qrcode не установлена" -ForegroundColor Yellow
-        Write-Host "  Установи: py -3.14 -m pip install qrcode" -ForegroundColor Cyan
+        Write-Host "  Модули qrcode/Pillow не установлены. Повтори установку компонента Python через ARGONOV Setup." -ForegroundColor Yellow
         return
     }
 
@@ -311,7 +327,7 @@ print(f'  PNG: {png_path}')
     [System.IO.File]::WriteAllText($tmp, $pyScript, $utf8NoBom)
 
     try {
-        & py -3.14 $tmp $text $pngPath
+        & $pythonExe @pythonArgs $tmp $text $pngPath
     } finally {
         Remove-Item $tmp -Force -ErrorAction SilentlyContinue
     }
