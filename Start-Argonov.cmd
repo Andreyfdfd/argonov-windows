@@ -10,6 +10,8 @@ if not exist "%ARGONOV_PWSH%" (
     exit /b 2
 )
 if exist "%ARGONOV_DEPENDENCY_ROOT%\Git\cmd" set "PATH=%ARGONOV_DEPENDENCY_ROOT%\Git\cmd;%PATH%"
+if exist "%ARGONOV_DEPENDENCY_ROOT%\PowerShell" set "PATH=%ARGONOV_DEPENDENCY_ROOT%\PowerShell;%PATH%"
+if exist "%ARGONOV_DEPENDENCY_ROOT%\dotnet" set "PATH=%ARGONOV_DEPENDENCY_ROOT%\dotnet;%PATH%"
 if exist "%ARGONOV_DEPENDENCY_ROOT%\Git\usr\bin" set "PATH=%ARGONOV_DEPENDENCY_ROOT%\Git\usr\bin;%PATH%"
 if exist "%ARGONOV_DEPENDENCY_ROOT%\Python314" set "PATH=%ARGONOV_DEPENDENCY_ROOT%\Python314;%ARGONOV_DEPENDENCY_ROOT%\Python314\Scripts;%PATH%"
 if exist "%LOCALAPPDATA%\Programs\Python\Launcher" set "PATH=%LOCALAPPDATA%\Programs\Python\Launcher;%PATH%"
