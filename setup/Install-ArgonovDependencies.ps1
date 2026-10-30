@@ -263,7 +263,7 @@ function Install-ArgonovGit {
             throw "PortableGit Git version probe failed: $gitVersion"
         }
         $bashVersion = (& $stagedBash --version 2>&1 | Select-Object -First 1 | Out-String).Trim()
-        if ($LASTEXITCODE -ne 0 -or $bashVersion -notmatch '^GNU bash version ') {
+        if ($LASTEXITCODE -ne 0 -or $bashVersion -notmatch '^GNU bash,? version ') {
             throw "PortableGit Bash version probe failed: $bashVersion"
         }
         $sshVersion = (& $stagedSsh -V 2>&1 | Out-String).Trim()
