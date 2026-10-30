@@ -8,7 +8,7 @@ $script:AI_DRY = $false
 $script:LMS = "$HOME\.lmstudio\bin\lms.exe"
 
 $script:AI_SANDBOX = @(
-    "C:\ARGONOV",
+    $(if ($global:ARGONOV_ROOT) { $global:ARGONOV_ROOT } else { $HOME }),
     "$HOME",
     "$HOME\Documents",
     "$HOME\Downloads",
@@ -70,6 +70,8 @@ function ai-system-prompt {
         '- Пути только абсолютные: C:\ARGONOV\file.ps1'
     )
     $prompt = $lines -join "`n"
+    $root = if ($global:ARGONOV_ROOT) { $global:ARGONOV_ROOT } else { $HOME }
+    $prompt = $prompt.Replace('C:\ARGONOV', $root)
     $sandbox = ($script:AI_SANDBOX | ForEach-Object { "  - $_" }) -join "`n"
     $prompt += "`n`nРАЗРЕШЁННЫЕ ПАПКИ:`n$sandbox"
     return $prompt
