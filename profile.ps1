@@ -4,7 +4,7 @@ if ($PSVersionTable.PSVersion -lt [version]'7.6') {
     Write-Warning ("ARGONOV SHELL requires PowerShell 7.6+. Current version: {0}. Start it with 'pwsh'." -f $PSVersionTable.PSVersion)
     return
 }
-# Resolve the installation from this profile file; never assume C:\ARGONOV.
+# Resolve the installation from this profile file; never assume a fixed drive or folder.
 $global:ARGONOV_ROOT = [System.IO.Path]::GetFullPath($PSScriptRoot)
 $global:ARGONOV_MODULE_ROOT = Join-Path $global:ARGONOV_ROOT 'modules'
 if (-not (Test-Path -LiteralPath $global:ARGONOV_MODULE_ROOT -PathType Container)) {
