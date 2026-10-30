@@ -179,7 +179,6 @@ function Install-ArgonovGit {
         }
         if (Test-Path -LiteralPath $managedGitExe -PathType Leaf) {
             Add-UserPathEntry -Path (Join-Path $managedGit 'cmd')
-            Add-UserPathEntry -Path (Join-Path $managedGit 'usr\bin')
             $version = (& $managedGitExe --version 2>$null | Out-String).Trim()
             if ($LASTEXITCODE -eq 0 -and $version -match '^git version ') {
                 $script:Results.Git = [ordered]@{ Status = 'Existing'; Version = $version; Path = $managedGitExe }
@@ -242,6 +241,9 @@ function Install-ArgonovGit {
         if (Test-Path -LiteralPath (Join-Path $stagingRoot 'post-install.bat') -PathType Leaf) {
             throw 'PortableGit post-install.bat remains. The SFX extraction/post-install sequence did not finish.'
         }
+        if (Test-Path -LiteralPath (Join-Path $stagingRoot 'etc\post-install') -PathType Container) {
+            throw 'PortableGit etc\post-install remains. Its final cleanup step did not run, so Git is not accepted as installed.'
+        }
         $stagedGitExe = Join-Path $stagingRoot 'cmd\git.exe'
         if (-not (Test-Path -LiteralPath $stagedGitExe -PathType Leaf)) {
             throw 'PortableGit extraction completed, but cmd\git.exe was not created.'
@@ -303,7 +305,6 @@ function Install-ArgonovGit {
         throw 'PortableGit was not installed correctly.'
     }
     Add-UserPathEntry -Path (Join-Path $managedGit 'cmd')
-    Add-UserPathEntry -Path (Join-Path $managedGit 'usr\bin')
     $version = (& $managedGitExe --version 2>$null | Out-String).Trim()
     if ($LASTEXITCODE -ne 0 -or $version -notmatch '^git version ') {
         throw 'PortableGit verification failed after extraction.'
