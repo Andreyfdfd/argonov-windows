@@ -193,11 +193,9 @@ function Install-ArgonovGit {
     if (-not $asset -or -not $asset.browser_download_url) {
         throw 'Latest Git for Windows x64 installer was not found.'
     }
-    if ([string]$asset.digest -notmatch '^sha256:([0-9a-fA-F]{64})$') {
-        throw 'GitHub release did not provide a SHA-256 digest for Git installer.'
-    }
-    $gitHash = $Matches[1]
-    $installer = Join-Path $env:TEMP $asset.name
+    $gitDigestMatch = [regex]::Match([string]$asset.digest, '^sha256:(?<hash>[0-9a-fA-F]{64})$')
+    if (-not $gitDigestMatch.Success) { throw 'GitHub release did not provide a SHA-256 digest for Git installer.' }
+    $gitHash = $gitDigestMatch.Groups['hash'].Value
     Invoke-VerifiedDownload -Uri $asset.browser_download_url -Destination $installer -ExpectedSha256 $gitHash -Label "Git for Windows $($release.tag_name)" | Out-Null
 
     $arguments = @('/VERYSILENT','/NORESTART','/NOCANCEL','/SP-',"/DIR=$managedGit")
@@ -328,11 +326,9 @@ function Install-ArgonovTerminal {
         if (-not $asset -or -not $asset.browser_download_url) {
             throw 'Latest stable Windows Terminal x64 ZIP was not found.'
         }
-        if ([string]$asset.digest -notmatch '^sha256:([0-9a-fA-F]{64})$') {
-            throw 'GitHub release did not provide a SHA-256 digest for Windows Terminal.'
-        }
-        $terminalHash = $Matches[1]
-        $archive = Join-Path $env:TEMP $asset.name
+    $terminalDigestMatch = [regex]::Match([string]$asset.digest, '^sha256:(?<hash>[0-9a-fA-F]{64})$')
+    if (-not $terminalDigestMatch.Success) { throw 'GitHub release did not provide a SHA-256 digest for Windows Terminal.' }
+    $terminalHash = $terminalDigestMatch.Groups['hash'].Value
         Invoke-VerifiedDownload -Uri $asset.browser_download_url -Destination $archive -ExpectedSha256 $terminalHash -Label "Windows Terminal $($release.tag_name)" | Out-Null
 
         $tempExtract = Join-Path $env:TEMP ('ARGONOV-WT-' + [guid]::NewGuid().ToString('N'))
@@ -379,8 +375,9 @@ function Install-ArgonovTerminal {
         }
 
         $terminalExe = Join-Path $portableRoot 'WindowsTerminal.exe'
-        if (-not (Test-Path -LiteralPath $terminalExe -PathType Leaf)) {
-            throw 'Windows Terminal was not installed correctly.'
+        $terminalCli = Join-Path $portableRoot 'wt.exe'
+        if (-not (Test-Path -LiteralPath $terminalExe -PathType Leaf) -or -not (Test-Path -LiteralPath $terminalCli -PathType Leaf)) {
+            throw 'Windows Terminal or its wt.exe command was not installed correctly.'
         }
         $releaseVersion = [string]$release.tag_name
         Write-DependencyLog "Installed portable Windows Terminal $releaseVersion." 'OK'
