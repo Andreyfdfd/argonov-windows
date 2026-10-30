@@ -111,7 +111,23 @@ jobs:
           if ($process.ExitCode -ne 0) { throw "Inno Setup $version installation failed with exit code $($process.ExitCode)." }
           Write-Host "Verified and installed Inno Setup $version." -ForegroundColor Green
 
-      - name: Compile Setup.exe
+      - name: Compile production installer configuration
+        shell: pwsh
+        run: |
+          $candidates = @(
+            'C:\Program Files (x86)\Inno Setup 6\ISCC.exe',
+            'C:\Program Files\Inno Setup 6\ISCC.exe',
+            (Join-Path $env:LOCALAPPDATA 'Programs\Inno Setup 6\ISCC.exe')
+          )
+          $iscc = $candidates | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1
+          if (-not $iscc) { throw 'ISCC.exe was not found after installing Inno Setup.' }
+          & $iscc '/Qp' '/FARGONOV-SHELL-Setup-x64-PRODUCTION' 'installer\ARGONOV.iss'
+          if ($LASTEXITCODE -ne 0) { throw "Production Inno Setup compilation failed with exit code $LASTEXITCODE." }
+          $productionSetup = 'dist\ARGONOV-SHELL-Setup-x64-PRODUCTION.exe'
+          if (-not (Test-Path -LiteralPath $productionSetup -PathType Leaf)) { throw 'Production Setup.exe was not created.' }
+          Get-FileHash -LiteralPath $productionSetup -Algorithm SHA256 | Format-List
+
+      - name: Compile isolated test Setup.exe
         shell: pwsh
         run: |
           $candidates = @(
