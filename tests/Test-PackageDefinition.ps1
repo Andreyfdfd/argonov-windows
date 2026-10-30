@@ -37,7 +37,7 @@ Assert-PackageTest ($iss.Contains("WizardIsTaskSelected('installGit')")) 'Instal
 Assert-PackageTest ($iss.Contains("WizardIsTaskSelected('installPython')")) 'Installer provides a Python dependency selection.'
 Assert-PackageTest ($iss.Contains("WizardIsTaskSelected('installTerminal')")) 'Installer provides a Windows Terminal dependency selection.'
 Assert-PackageTest ($dependencyScript.Contains('Microsoft\Windows Terminal\Fragments\ARGONOV-SHELL')) 'Windows Terminal profile is added using the documented per-user fragment directory.'
-Assert-PackageTest (-not $dependencyScript.Contains('settings.json')) 'Windows Terminal user settings are not rewritten by the installer.'
+Assert-PackageTest (-not $dependencyScript.Contains('Get-Content -LiteralPath $settingsPath')) 'Windows Terminal user settings are not rewritten by the installer.'
 Assert-PackageTest ($iss.Contains("WizardIsTaskSelected('installSensors')")) 'Installer provides a sensor backend selection.'
 Assert-PackageTest ($dependencyScript.Contains('Get-GitHubLatestRelease')) 'Dependency bootstrap retrieves maintained GitHub releases.'
 Assert-PackageTest ($dependencyScript.Contains('Invoke-VerifiedDownload')) 'External installers are SHA-256 verified before execution.'
