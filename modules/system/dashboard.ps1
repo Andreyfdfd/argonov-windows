@@ -158,8 +158,9 @@ function dash {
     # ═══ ARGONOV SHELL ═══
     Write-Host "  ▬ ARGONOV SHELL" -ForegroundColor Magenta
 
-    if (Test-Path "C:\ARGONOV\.git") {
-        Push-Location "C:\ARGONOV"
+    $argonovRoot = if ($global:ARGONOV_ROOT) { $global:ARGONOV_ROOT } else { Split-Path -Parent (Split-Path -Parent $PSScriptRoot) }
+    if (Test-Path (Join-Path $argonovRoot '.git')) {
+        Push-Location $argonovRoot
         $branch = & git symbolic-ref --short HEAD 2>$null
         $status = & git status --porcelain 2>$null
         $dirty = ($status -ne $null -and $status.Length -gt 0)
@@ -167,7 +168,7 @@ function dash {
         $commitCount = (& git rev-list --count HEAD 2>$null)
         Pop-Location
 
-        Write-Host "    📁 C:\ARGONOV  [" -NoNewline
+        Write-Host "    📁 $argonovRoot  [" -NoNewline
         if ($dirty) {
             Write-Host "$branch*" -NoNewline -ForegroundColor Yellow
         } else {
@@ -180,7 +181,7 @@ function dash {
             Write-Host "    └─ $lastCommit" -ForegroundColor Gray
         }
     } else {
-        Write-Host "    📁 C:\ARGONOV: не git-репозиторий" -ForegroundColor Red
+        Write-Host "    📁 $argonovRoot: не git-репозиторий" -ForegroundColor Red
     }
     Write-Host ""
 
