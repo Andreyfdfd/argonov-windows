@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: argonov-installer-v2-${{ github.ref }}
+  group: argonov-installer-v3-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
