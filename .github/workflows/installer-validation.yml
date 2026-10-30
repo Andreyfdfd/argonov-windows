@@ -197,6 +197,11 @@ jobs:
           if (-not (Test-Path -LiteralPath $uninstaller -PathType Leaf)) { throw 'Uninstaller was not created.' }
           $uninstall = Start-Process -FilePath $uninstaller -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART') -Wait -PassThru
           if ($uninstall.ExitCode -ne 0) { throw "Uninstaller exited with $($uninstall.ExitCode)." }
+          $shellFiles = @('Start-Argonov.ps1','Start-Argonov.cmd','Launch-Argonov.cmd','profile.ps1') | ForEach-Object { Join-Path $target $_ }
+          $remainingShellFiles = @($shellFiles | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf })
+          if ($remainingShellFiles.Count -gt 0) { throw "ARGONOV shell files remained after uninstall: $($remainingShellFiles -join ', ')" }
+          if (Test-Path -LiteralPath (Join-Path $target 'modules') -PathType Container) { throw 'ARGONOV modules directory remained after uninstall.' }
+          Write-Host 'ARGONOV launcher, profile and modules were removed by the uninstaller.' -ForegroundColor Green
           if (-not (Test-Path -LiteralPath $keepFile -PathType Leaf)) { throw 'User data was removed by uninstaller.' }
           if (-not (Test-Path -LiteralPath $pwsh -PathType Leaf)) { throw 'Shared PowerShell runtime was removed during shell uninstall.' }
           if (-not (Test-Path -LiteralPath (Join-Path $env:DOTNET_ROOT 'host\fxr') -PathType Container)) { throw 'Shared .NET runtime was removed during shell uninstall.' }
