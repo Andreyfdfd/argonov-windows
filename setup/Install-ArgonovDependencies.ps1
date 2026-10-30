@@ -242,10 +242,6 @@ function Install-ArgonovGit {
         if (Test-Path -LiteralPath (Join-Path $stagingRoot 'post-install.bat') -PathType Leaf) {
             throw 'PortableGit post-install.bat remains. The SFX extraction/post-install sequence did not finish.'
         }
-        if (Test-Path -LiteralPath (Join-Path $stagingRoot 'etc\post-install') -PathType Container) {
-            throw 'PortableGit etc\post-install remains. The post-install scripts did not complete.'
-        }
-
         $stagedGitExe = Join-Path $stagingRoot 'cmd\git.exe'
         if (-not (Test-Path -LiteralPath $stagedGitExe -PathType Leaf)) {
             throw 'PortableGit extraction completed, but cmd\git.exe was not created.'
