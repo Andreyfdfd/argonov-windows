@@ -159,9 +159,11 @@ jobs:
           $gitExe = Join-Path $dependenciesRoot 'Git\cmd\git.exe'
           $pythonExe = Join-Path $dependenciesRoot 'Python314\python.exe'
           $terminalExe = Join-Path $dependenciesRoot 'WindowsTerminal\WindowsTerminal.exe'
+          $terminalCli = Join-Path $dependenciesRoot 'WindowsTerminal\wt.exe'
           if (-not (Test-Path -LiteralPath $gitExe -PathType Leaf)) { throw 'Isolated Git dependency was not installed.' }
           if (-not (Test-Path -LiteralPath $pythonExe -PathType Leaf)) { throw 'Isolated Python 3.14 dependency was not installed.' }
           if (-not (Test-Path -LiteralPath $terminalExe -PathType Leaf)) { throw 'Portable Windows Terminal dependency was not installed.' }
+          if (-not (Test-Path -LiteralPath $terminalCli -PathType Leaf)) { throw 'Windows Terminal wt.exe command was not installed.' }
           & $pythonExe -c 'import qrcode; from PIL import Image'
           if ($LASTEXITCODE -ne 0) { throw 'Python qrcode/Pillow package verification failed.' }
           $terminalFragment = Join-Path $env:LOCALAPPDATA 'Microsoft\Windows Terminal\Fragments\ARGONOV-SHELL\argonov.json'
@@ -184,6 +186,7 @@ jobs:
           if (-not (Test-Path -LiteralPath $gitExe -PathType Leaf)) { throw 'Shared Git dependency was removed during shell uninstall.' }
           if (-not (Test-Path -LiteralPath $pythonExe -PathType Leaf)) { throw 'Shared Python dependency was removed during shell uninstall.' }
           if (-not (Test-Path -LiteralPath $terminalExe -PathType Leaf)) { throw 'Shared Windows Terminal dependency was removed during shell uninstall.' }
+          if (-not (Test-Path -LiteralPath $terminalCli -PathType Leaf)) { throw 'Shared Windows Terminal wt.exe was removed during shell uninstall.' }
           Write-Host 'Setup install/uninstall smoke test passed; shell was removed and shared dependencies/user data were preserved.' -ForegroundColor Green
           Remove-Item -LiteralPath $target -Recurse -Force
           Remove-Item -LiteralPath $dependenciesRoot -Recurse -Force -ErrorAction SilentlyContinue
