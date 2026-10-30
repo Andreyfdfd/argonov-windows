@@ -19,6 +19,7 @@ Assert-PackageTest ($iss.Contains('DefaultDirName={localappdata}\Programs\ARGONO
 Assert-PackageTest ($iss.Contains('payload\powershell')) 'Installer includes the bundled PowerShell runtime.'
 Assert-PackageTest ($iss.Contains('uninsneveruninstall')) 'User data directories are preserved by uninstall.'
 Assert-PackageTest (-not $iss.Contains('$PROFILE')) 'Installer definition does not edit the current PowerShell profile.'
-Assert-PackageTest ($start.Contains("Join-Path $PSScriptRoot 'runtime\pwsh.exe'")) 'Launcher uses the bundled PowerShell runtime.'
+$launcherRuntimePattern = 'Join-Path $PSScriptRoot ''runtime\pwsh.exe'''
+Assert-PackageTest ($start.Contains($launcherRuntimePattern)) 'Launcher uses the bundled PowerShell runtime.'
 Assert-PackageTest ($start.Contains('. $profile')) 'Launcher loads ARGONOV profile explicitly.'
 Write-Host 'PACKAGE DEFINITION TESTS PASSED' -ForegroundColor Green
