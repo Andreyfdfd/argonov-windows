@@ -121,7 +121,7 @@ jobs:
           )
           $iscc = $candidates | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1
           if (-not $iscc) { throw 'ISCC.exe was not found after installing Inno Setup.' }
-          & $iscc '/Qp' 'installer\ARGONOV.iss'
+          & $iscc '/Qp' '/DArgonovTestBuild' 'installer\ARGONOV.iss'
           if ($LASTEXITCODE -ne 0) { throw "Inno Setup compilation failed with exit code $LASTEXITCODE." }
           $setup = 'dist\ARGONOV-SHELL-Setup-x64.exe'
           if (-not (Test-Path -LiteralPath $setup -PathType Leaf)) { throw 'Compiled Setup.exe was not created.' }
@@ -131,9 +131,24 @@ jobs:
         shell: pwsh
         run: |
           $setup = (Resolve-Path 'dist\ARGONOV-SHELL-Setup-x64.exe').Path
-          $target = Join-Path $env:RUNNER_TEMP 'ARGONOV-SMOKE-INSTALL'
+          $runId = [guid]::NewGuid().ToString('N')
+          $target = Join-Path $env:RUNNER_TEMP ("ARGONOV-SMOKE-INSTALL-" + $runId)
           $dependenciesRoot = Join-Path $env:LOCALAPPDATA 'Programs\ARGONOV-Dependencies'
-          $sensorRoot = Join-Path $env:RUNNER_TEMP 'ARGONOV-SMOKE-SENSORS'
+          $sensorRoot = Join-Path $env:RUNNER_TEMP ("ARGONOV-SMOKE-SENSORS-" + $runId)
+          if (Test-Path -LiteralPath $dependenciesRoot) {
+            throw "Refusing to overwrite or later remove a pre-existing shared dependency directory: $dependenciesRoot"
+          }
+          $programsRoot = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs'
+          $legacyShortcut = Join-Path $programsRoot 'ARGONOV SHELL.lnk'
+          $testShortcut = Join-Path $programsRoot 'ARGONOV SHELL (TEST).lnk'
+          if (Test-Path -LiteralPath $legacyShortcut) {
+            throw "Refusing to overwrite a pre-existing production shortcut: $legacyShortcut"
+          }
+          if (Test-Path -LiteralPath $testShortcut) {
+            throw "Refusing to overwrite a pre-existing test shortcut: $testShortcut"
+          }
+          New-Item -ItemType Directory -Path $programsRoot -Force | Out-Null
+          Set-Content -LiteralPath $legacyShortcut -Value 'ARGONOV_PRODUCTION_SHORTCUT_MUST_SURVIVE'
           $env:ARGONOV_INSTALLER_TEST = '1'
           $env:ARGONOV_DEPENDENCY_ROOT = $dependenciesRoot
           $env:ARGONOV_SYSINFO_LHM_DIR = $sensorRoot
@@ -141,6 +156,12 @@ jobs:
           $arguments = @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/SP-',"/DIR=$target","/LOG=$log",'/TASKS=installGit,installPython,installTerminal,installSensors')
           $process = Start-Process -FilePath $setup -ArgumentList $arguments -Wait -PassThru
           if ($process.ExitCode -ne 0) { throw "Setup.exe exited with $($process.ExitCode)." }
+          if (-not (Test-Path -LiteralPath $testShortcut -PathType Leaf)) { throw 'Test-specific Start menu shortcut was not created.' }
+          if ((Get-Content -LiteralPath $legacyShortcut -Raw).Trim() -ne 'ARGONOV_PRODUCTION_SHORTCUT_MUST_SURVIVE') {
+            throw 'Test installation changed the protected production shortcut.'
+          }
+          $sshExe = Join-Path $env:WINDIR 'System32\OpenSSH\ssh.exe'
+          $sshExistedBefore = Test-Path -LiteralPath $sshExe
 
           $pwsh = Join-Path $dependenciesRoot 'PowerShell\pwsh.exe'
           $launcher = Join-Path $target 'Start-Argonov.ps1'
@@ -201,19 +222,24 @@ jobs:
           $remainingShellFiles = @($shellFiles | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf })
           if ($remainingShellFiles.Count -gt 0) { throw "ARGONOV shell files remained after uninstall: $($remainingShellFiles -join ', ')" }
           if (Test-Path -LiteralPath (Join-Path $target 'modules') -PathType Container) { throw 'ARGONOV modules directory remained after uninstall.' }
-          Write-Host 'ARGONOV launcher, profile and modules were removed by the uninstaller.' -ForegroundColor Green
+          if (Test-Path -LiteralPath $testShortcut) { throw 'Test-specific Start menu shortcut remained after uninstall.' }
+          if ((Get-Content -LiteralPath $legacyShortcut -Raw).Trim() -ne 'ARGONOV_PRODUCTION_SHORTCUT_MUST_SURVIVE') {
+            throw 'Uninstall changed the protected production shortcut.'
+          }
+          Write-Host 'ARGONOV launcher, profile and modules were removed by the uninstaller; production shortcut survived.' -ForegroundColor Green
           if (-not (Test-Path -LiteralPath $keepFile -PathType Leaf)) { throw 'User data was removed by uninstaller.' }
           if (-not (Test-Path -LiteralPath $pwsh -PathType Leaf)) { throw 'Shared PowerShell runtime was removed during shell uninstall.' }
           if (-not (Test-Path -LiteralPath (Join-Path $env:DOTNET_ROOT 'host\fxr') -PathType Container)) { throw 'Shared .NET runtime was removed during shell uninstall.' }
           if (-not (Test-Path -LiteralPath $gitExe -PathType Leaf)) { throw 'Shared MinGit dependency was removed during shell uninstall.' }
-          if ($sshExe -and -not (Test-Path -LiteralPath $sshExe -PathType Leaf)) { throw 'The previously detected OpenSSH client disappeared during shell uninstall.' }
+          if ($sshExistedBefore -and -not (Test-Path -LiteralPath $sshExe -PathType Leaf)) { throw 'The previously detected OpenSSH client disappeared during shell uninstall.' }
           if (-not (Test-Path -LiteralPath $pythonExe -PathType Leaf)) { throw 'Shared Python dependency was removed during shell uninstall.' }
           if (-not (Test-Path -LiteralPath $pythonPackages -PathType Container)) { throw 'Shared Python packages were removed during shell uninstall.' }
           if (-not (Test-Path -LiteralPath $terminalExe -PathType Leaf)) { throw 'Shared Windows Terminal dependency was removed during shell uninstall.' }
           if (-not (Test-Path -LiteralPath $terminalCli -PathType Leaf)) { throw 'Shared Windows Terminal wt.exe was removed during shell uninstall.' }
           Write-Host 'Setup install/uninstall smoke test passed; shell was removed and shared PowerShell/.NET/MinGit/Python/Terminal dependencies and user data were preserved.' -ForegroundColor Green
-          Remove-Item -LiteralPath $target -Recurse -Force
+          Remove-Item -LiteralPath $target -Recurse -Force -ErrorAction SilentlyContinue
           Remove-Item -LiteralPath $dependenciesRoot -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item -LiteralPath $legacyShortcut -Force -ErrorAction SilentlyContinue
           Remove-Item Env:ARGONOV_SYSINFO_LHM_DIR -ErrorAction SilentlyContinue
           Remove-Item Env:PYTHONPATH -ErrorAction SilentlyContinue
           Remove-Item -LiteralPath $sensorRoot -Recurse -Force -ErrorAction SilentlyContinue
