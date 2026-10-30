@@ -6,7 +6,6 @@ param(
     [switch]$InstallPython,
     [switch]$InstallTerminal,
     [switch]$InstallSensors,
-    [switch]$SetTerminalDefault,
     [switch]$ForceComponents,
     [switch]$NoUserPathChanges,
     [string]$InstallRoot = (Split-Path -Parent $PSScriptRoot),
@@ -302,162 +301,133 @@ function Install-ArgonovPython {
     Write-DependencyLog "$version and qrcode/Pillow verified." 'OK'
 }
 
-function Get-ArgonovTerminalSettingsPath {
-    param([string]$PortableRoot)
-
-    if ($PortableRoot) {
-        return (Join-Path $PortableRoot 'settings\settings.json')
-    }
-
-    $package = Get-AppxPackage -Name Microsoft.WindowsTerminal -ErrorAction SilentlyContinue | Select-Object -First 1
-    if ($package) {
-        return (Join-Path $env:LOCALAPPDATA "Packages\$($package.PackageFamilyName)\LocalState\settings.json")
-    }
-    return $null
+function Get-ArgonovTerminalFragmentPath {
+    $fragmentRoot = Join-Path $env:LOCALAPPDATA 'Microsoft\Windows Terminal\Fragments\ARGONOV-SHELL'
+    return (Join-Path $fragmentRoot 'argonov.json')
 }
 
 function Install-ArgonovTerminal {
     $portableRoot = Join-Path $DependencyRoot 'WindowsTerminal'
     $terminalExe = Join-Path $portableRoot 'WindowsTerminal.exe'
-    $settingsPath = $null
     $appxPackage = $null
-
     if (-not $ForceComponents) {
         $appxPackage = Get-AppxPackage -Name Microsoft.WindowsTerminal -ErrorAction SilentlyContinue | Select-Object -First 1
     }
 
     if ($appxPackage) {
-        $settingsPath = Get-ArgonovTerminalSettingsPath
         $releaseVersion = [string]$appxPackage.Version
         Write-DependencyLog "Using existing Windows Terminal package $releaseVersion." 'OK'
-    } else {
-        if (-not (Test-Path -LiteralPath $terminalExe -PathType Leaf) -or $ForceComponents) {
-            $build = [Environment]::OSVersion.Version.Build
-            if ($build -lt 19041) {
-                throw "Windows Terminal portable mode requires Windows 10 build 19041 or newer. Current build: $build."
-            }
-
-            $release = Get-GitHubLatestRelease -Repository 'microsoft/terminal'
-            $asset = $release.assets | Where-Object { $_.name -match '^Microsoft\.WindowsTerminal_.+_x64\.zip$' } | Select-Object -First 1
-            if (-not $asset -or -not $asset.browser_download_url) {
-                throw 'Latest stable Windows Terminal x64 ZIP was not found.'
-            }
-            if ([string]$asset.digest -notmatch '^sha256:([0-9a-fA-F]{64})$') {
-                throw 'GitHub release did not provide a SHA-256 digest for Windows Terminal.'
-            }
-            $terminalHash = $Matches[1]
-            $archive = Join-Path $env:TEMP $asset.name
-            Invoke-VerifiedDownload -Uri $asset.browser_download_url -Destination $archive -ExpectedSha256 $terminalHash -Label "Windows Terminal $($release.tag_name)" | Out-Null
-
-            $tempExtract = Join-Path $env:TEMP ('ARGONOV-WT-' + [guid]::NewGuid().ToString('N'))
-            $stagingRoot = "$portableRoot.staging-$([guid]::NewGuid().ToString('N'))"
-            try {
-                Expand-Archive -LiteralPath $archive -DestinationPath $tempExtract -Force
-                $exe = Get-ChildItem -LiteralPath $tempExtract -Filter 'WindowsTerminal.exe' -File -Recurse | Select-Object -First 1
-                if (-not $exe) { throw 'Verified Windows Terminal archive did not contain WindowsTerminal.exe.' }
-
-                New-Item -ItemType Directory -Path $stagingRoot -Force | Out-Null
-                Copy-Item -Path (Join-Path $exe.DirectoryName '*') -Destination $stagingRoot -Recurse -Force
-                New-Item -ItemType File -Path (Join-Path $stagingRoot '.portable') -Force | Out-Null
-                @{
-                    Name = 'Windows Terminal'
-                    Version = $release.tag_name
-                    Source = $asset.browser_download_url
-                    SHA256 = $terminalHash
-                    ManagedBy = 'ARGONOV SHELL installer'
-                    InstalledAt = (Get-Date).ToString('o')
-                } | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $stagingRoot 'argonov-dependency.json') -Encoding utf8
-
-                if (Test-Path -LiteralPath $portableRoot) {
-                    $backup = "$portableRoot.backup-$([guid]::NewGuid().ToString('N'))"
-                    Move-Item -LiteralPath $portableRoot -Destination $backup
-                    try {
-                        Move-Item -LiteralPath $stagingRoot -Destination $portableRoot
-                        Remove-Item -LiteralPath $backup -Recurse -Force
-                    } catch {
-                        if (-not (Test-Path -LiteralPath $portableRoot)) {
-                            Move-Item -LiteralPath $backup -Destination $portableRoot
-                        }
-                        throw
-                    }
-                } else {
-                    Move-Item -LiteralPath $stagingRoot -Destination $portableRoot
-                }
-            } finally {
-                if (Test-Path -LiteralPath $tempExtract) {
-                    Remove-Item -LiteralPath $tempExtract -Recurse -Force -ErrorAction SilentlyContinue
-                }
-                if (Test-Path -LiteralPath $stagingRoot) {
-                    Remove-Item -LiteralPath $stagingRoot -Recurse -Force -ErrorAction SilentlyContinue
-                }
-            }
-
-            $terminalExe = Join-Path $portableRoot 'WindowsTerminal.exe'
-            if (-not (Test-Path -LiteralPath $terminalExe -PathType Leaf)) {
-                throw 'Windows Terminal was not installed correctly.'
-            }
-            $releaseVersion = [string]$release.tag_name
-            Write-DependencyLog "Installed portable Windows Terminal $releaseVersion." 'OK'
-        } else {
-            $releaseVersion = 'managed'
-            Write-DependencyLog 'ARGONOV-managed Windows Terminal is already present.' 'OK'
+    } elseif (-not (Test-Path -LiteralPath $terminalExe -PathType Leaf) -or $ForceComponents) {
+        $build = [Environment]::OSVersion.Version.Build
+        if ($build -lt 19041) {
+            throw "Windows Terminal portable mode requires Windows 10 build 19041 or newer. Current build: $build."
         }
-        $settingsPath = Get-ArgonovTerminalSettingsPath -PortableRoot $portableRoot
+
+        $release = Get-GitHubLatestRelease -Repository 'microsoft/terminal'
+        $asset = $release.assets | Where-Object { $_.name -match '^Microsoft\.WindowsTerminal_.+_x64\.zip$' } | Select-Object -First 1
+        if (-not $asset -or -not $asset.browser_download_url) {
+            throw 'Latest stable Windows Terminal x64 ZIP was not found.'
+        }
+        if ([string]$asset.digest -notmatch '^sha256:([0-9a-fA-F]{64})$') {
+            throw 'GitHub release did not provide a SHA-256 digest for Windows Terminal.'
+        }
+        $terminalHash = $Matches[1]
+        $archive = Join-Path $env:TEMP $asset.name
+        Invoke-VerifiedDownload -Uri $asset.browser_download_url -Destination $archive -ExpectedSha256 $terminalHash -Label "Windows Terminal $($release.tag_name)" | Out-Null
+
+        $tempExtract = Join-Path $env:TEMP ('ARGONOV-WT-' + [guid]::NewGuid().ToString('N'))
+        $stagingRoot = "$portableRoot.staging-$([guid]::NewGuid().ToString('N'))"
+        try {
+            Expand-Archive -LiteralPath $archive -DestinationPath $tempExtract -Force
+            $exe = Get-ChildItem -LiteralPath $tempExtract -Filter 'WindowsTerminal.exe' -File -Recurse | Select-Object -First 1
+            if (-not $exe) { throw 'Verified Windows Terminal archive did not contain WindowsTerminal.exe.' }
+
+            New-Item -ItemType Directory -Path $stagingRoot -Force | Out-Null
+            Copy-Item -Path (Join-Path $exe.DirectoryName '*') -Destination $stagingRoot -Recurse -Force
+            New-Item -ItemType File -Path (Join-Path $stagingRoot '.portable') -Force | Out-Null
+            @{
+                Name = 'Windows Terminal'
+                Version = $release.tag_name
+                Source = $asset.browser_download_url
+                SHA256 = $terminalHash
+                ManagedBy = 'ARGONOV SHELL installer'
+                InstalledAt = (Get-Date).ToString('o')
+            } | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $stagingRoot 'argonov-dependency.json') -Encoding utf8
+
+            if (Test-Path -LiteralPath $portableRoot) {
+                $backup = "$portableRoot.backup-$([guid]::NewGuid().ToString('N'))"
+                Move-Item -LiteralPath $portableRoot -Destination $backup
+                try {
+                    Move-Item -LiteralPath $stagingRoot -Destination $portableRoot
+                    Remove-Item -LiteralPath $backup -Recurse -Force
+                } catch {
+                    if (-not (Test-Path -LiteralPath $portableRoot)) {
+                        Move-Item -LiteralPath $backup -Destination $portableRoot
+                    }
+                    throw
+                }
+            } else {
+                Move-Item -LiteralPath $stagingRoot -Destination $portableRoot
+            }
+        } finally {
+            if (Test-Path -LiteralPath $tempExtract) {
+                Remove-Item -LiteralPath $tempExtract -Recurse -Force -ErrorAction SilentlyContinue
+            }
+            if (Test-Path -LiteralPath $stagingRoot) {
+                Remove-Item -LiteralPath $stagingRoot -Recurse -Force -ErrorAction SilentlyContinue
+            }
+        }
+
+        $terminalExe = Join-Path $portableRoot 'WindowsTerminal.exe'
+        if (-not (Test-Path -LiteralPath $terminalExe -PathType Leaf)) {
+            throw 'Windows Terminal was not installed correctly.'
+        }
+        $releaseVersion = [string]$release.tag_name
+        Write-DependencyLog "Installed portable Windows Terminal $releaseVersion." 'OK'
+    } else {
+        $releaseVersion = 'managed'
+        Write-DependencyLog 'ARGONOV-managed Windows Terminal is already present.' 'OK'
     }
 
-    if (-not $settingsPath) { throw 'Windows Terminal settings path could not be resolved.' }
-    $settingsDirectory = Split-Path -Parent $settingsPath
-    New-Item -ItemType Directory -Path $settingsDirectory -Force | Out-Null
+    # Use the documented per-user JSON fragment extension point. This leaves
+    # the user's JSONC settings.json, default profile and other settings intact.
+    $fragmentPath = Get-ArgonovTerminalFragmentPath
+    $fragmentDirectory = Split-Path -Parent $fragmentPath
+    New-Item -ItemType Directory -Path $fragmentDirectory -Force | Out-Null
 
     $profileGuid = '{A3D6C31F-5E7B-4F4A-8C2E-9D4F2A6B1C80}'
     $launcher = Join-Path $InstallRoot 'Start-Argonov.cmd'
     $commandLine = 'cmd.exe /d /s /c ""' + $launcher + '""'
-    $argonovProfile = [ordered]@{
-        guid = $profileGuid
-        name = 'ARGONOV SHELL'
-        commandline = $commandLine
-        startingDirectory = '%USERPROFILE%'
-        hidden = $false
+    $fragment = [ordered]@{
+        profiles = @(
+            [ordered]@{
+                guid = $profileGuid
+                name = 'ARGONOV SHELL'
+                commandline = $commandLine
+                startingDirectory = '%USERPROFILE%'
+                hidden = $false
+            }
+        )
     }
-
-    if (Test-Path -LiteralPath $settingsPath -PathType Leaf) {
+    $json = $fragment | ConvertTo-Json -Depth 16
+    if (Test-Path -LiteralPath $fragmentPath -PathType Leaf) {
         $stamp = Get-Date -Format 'yyyyMMdd-HHmmss-fff'
-        Copy-Item -LiteralPath $settingsPath -Destination "$settingsPath.argonov-backup-$stamp" -Force
-        try {
-            $settings = Get-Content -LiteralPath $settingsPath -Raw -Encoding utf8 | ConvertFrom-Json -AsHashtable
-        } catch {
-            throw "Windows Terminal settings.json is not valid JSON. Original file was backed up: $settingsPath"
-        }
-    } else {
-        $settings = [ordered]@{
-            '$schema' = 'https://aka.ms/terminal-profiles-schema'
-            profiles = [ordered]@{ defaults = [ordered]@{}; list = @() }
-            schemes = @()
-            actions = @()
-        }
+        Copy-Item -LiteralPath $fragmentPath -Destination "$fragmentPath.backup-$stamp" -Force
     }
+    [System.IO.File]::WriteAllText($fragmentPath, $json + [Environment]::NewLine, [System.Text.UTF8Encoding]::new($false))
 
-    if (-not $settings.Contains('profiles') -or $settings.profiles -isnot [System.Collections.IDictionary]) {
-        $settings['profiles'] = [ordered]@{ defaults = [ordered]@{}; list = @() }
+    $verified = Get-Content -LiteralPath $fragmentPath -Raw -Encoding utf8 | ConvertFrom-Json
+    if (-not ($verified.profiles | Where-Object { $_.name -eq 'ARGONOV SHELL' -and $_.guid -eq $profileGuid })) {
+        throw 'ARGONOV Windows Terminal profile fragment failed verification.'
     }
-    if (-not $settings.profiles.Contains('list')) { $settings.profiles['list'] = @() }
-
-    $existingProfiles = @($settings.profiles['list'] | Where-Object { $_ -and $_.guid -ne $profileGuid })
-    $settings.profiles['list'] = @($existingProfiles + $argonovProfile)
-    if ($SetTerminalDefault -or -not $settings.Contains('defaultProfile') -or [string]::IsNullOrWhiteSpace([string]$settings.defaultProfile)) {
-        $settings['defaultProfile'] = $profileGuid
-    }
-
-    $json = $settings | ConvertTo-Json -Depth 64
-    [System.IO.File]::WriteAllText($settingsPath, $json + [Environment]::NewLine, [System.Text.UTF8Encoding]::new($false))
 
     $script:Results.WindowsTerminal = [ordered]@{
         Status = 'Configured'
         Version = $releaseVersion
-        Settings = $settingsPath
-        DefaultProfile = [bool]($settings.defaultProfile -eq $profileGuid)
+        Fragment = $fragmentPath
+        DefaultProfileChanged = $false
     }
-    Write-DependencyLog "ARGONOV SHELL profile added to Windows Terminal settings: $settingsPath." 'OK'
+    Write-DependencyLog "ARGONOV SHELL profile fragment installed: $fragmentPath." 'OK'
 }
 
 function Install-ArgonovSensors {
