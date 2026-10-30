@@ -182,99 +182,66 @@ function Install-ArgonovGit {
             $version = (& $managedGitExe --version 2>$null | Out-String).Trim()
             if ($LASTEXITCODE -eq 0 -and $version -match '^git version ') {
                 $script:Results.Git = [ordered]@{ Status = 'Existing'; Version = $version; Path = $managedGitExe }
-                Write-DependencyLog "Managed PortableGit already available: $version." 'OK'
+                Write-DependencyLog "Managed MinGit already available: $version." 'OK'
                 return
             }
         }
     }
 
     $release = Get-GitHubLatestRelease -Repository 'git-for-windows/git'
-    $asset = $release.assets | Where-Object { $_.name -match '^PortableGit-.+-64-bit\.7z\.exe$' } | Select-Object -First 1
+    $asset = $release.assets | Where-Object { $_.name -match '^MinGit-.+-64-bit\.zip$' } | Select-Object -First 1
     if (-not $asset -or -not $asset.browser_download_url) {
-        throw 'Latest PortableGit x64 self-extracting archive was not found.'
+        throw 'Latest MinGit x64 ZIP archive was not found in the official Git for Windows release.'
     }
     $digestMatch = [regex]::Match([string]$asset.digest, '^sha256:(?<hash>[0-9a-fA-F]{64})$')
     if (-not $digestMatch.Success) {
-        throw 'GitHub release did not provide a SHA-256 digest for PortableGit.'
+        throw 'GitHub release did not provide a SHA-256 digest for MinGit.'
     }
-    $portableGitHash = $digestMatch.Groups['hash'].Value
+
+    $minGitHash = $digestMatch.Groups['hash'].Value
     $archive = Join-Path $env:TEMP $asset.name
-    Invoke-VerifiedDownload -Uri $asset.browser_download_url -Destination $archive -ExpectedSha256 $portableGitHash -Label "PortableGit $($release.tag_name)" | Out-Null
+    Invoke-VerifiedDownload -Uri $asset.browser_download_url -Destination $archive -ExpectedSha256 $minGitHash -Label "MinGit $($release.tag_name)" | Out-Null
 
     $parent = Split-Path -Parent $managedGit
     New-Item -ItemType Directory -Path $parent -Force | Out-Null
     $stagingRoot = "$managedGit.staging-$([guid]::NewGuid().ToString('N'))"
     New-Item -ItemType Directory -Path $stagingRoot -Force | Out-Null
     try {
-        # Current Git for Windows PortableGit archives use the modern 7-Zip SFX
-        # command line: -y suppresses prompts and -o selects the extraction path.
-        # Keep the path quoted verbatim: SFX parsing handles spaces and Unicode.
-        $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
-        $startInfo.FileName = $archive
-        $startInfo.Arguments = '-y -o"' + $stagingRoot + '"'
-        $startInfo.UseShellExecute = $false
-        $startInfo.CreateNoWindow = $true
-        $startInfo.WindowStyle = [System.Diagnostics.ProcessWindowStyle]::Hidden
-        Write-DependencyLog "Extracting PortableGit $($release.tag_name) into the per-user dependency directory..."
-        $process = [System.Diagnostics.Process]::Start($startInfo)
-        if (-not $process) { throw 'Could not start the PortableGit self-extracting archive.' }
-        $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
-        $nextHeartbeat = 60
-        try {
-            while (-not $process.WaitForExit(5000)) {
-                if ($stopwatch.Elapsed.TotalSeconds -ge 600) {
-                    try { $process.Kill($true) } catch {}
-                    throw 'PortableGit extraction exceeded the 10-minute safety timeout.'
-                }
-                if ($stopwatch.Elapsed.TotalSeconds -ge $nextHeartbeat) {
-                    $elapsed = [math]::Round($stopwatch.Elapsed.TotalSeconds)
-                    Write-DependencyLog "PortableGit extraction is still running after $elapsed seconds."
-                    $nextHeartbeat += 60
-                }
-            }
-            $code = $process.ExitCode
-        } finally {
-            $stopwatch.Stop()
-            $process.Dispose()
-        }
-        if ($code -ne 0) { throw "PortableGit extraction returned exit code $code." }
-        if (Test-Path -LiteralPath (Join-Path $stagingRoot 'post-install.bat') -PathType Leaf) {
-            throw 'PortableGit post-install.bat remains. The SFX extraction/post-install sequence did not finish.'
-        }
-        if (Test-Path -LiteralPath (Join-Path $stagingRoot 'etc\post-install') -PathType Container) {
-            throw 'PortableGit etc\post-install remains. Its final cleanup step did not run, so Git is not accepted as installed.'
-        }
+        Write-DependencyLog "Extracting MinGit $($release.tag_name) into the per-user dependency directory..."
+        Expand-Archive -LiteralPath $archive -DestinationPath $stagingRoot -Force
+
         $stagedGitExe = Join-Path $stagingRoot 'cmd\git.exe'
         if (-not (Test-Path -LiteralPath $stagedGitExe -PathType Leaf)) {
-            throw 'PortableGit extraction completed, but cmd\git.exe was not created.'
+            throw 'MinGit extraction completed, but cmd\git.exe was not found.'
         }
-        $stagedSsh = Join-Path $stagingRoot 'usr\bin\ssh.exe'
-        if (-not (Test-Path -LiteralPath $stagedSsh -PathType Leaf)) {
-            throw 'PortableGit extraction completed, but its OpenSSH client was not found.'
+
+        $sshCandidates = @(
+            (Join-Path $stagingRoot 'usr\bin\ssh.exe'),
+            (Join-Path $stagingRoot 'mingw64\bin\ssh.exe'),
+            (Join-Path $stagingRoot 'ucrt64\bin\ssh.exe')
+        )
+        $stagedSsh = $sshCandidates | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1
+        if (-not $stagedSsh) {
+            throw 'MinGit archive did not include an OpenSSH client. Git was not accepted as fully configured.'
         }
-        $stagedBash = Join-Path $stagingRoot 'usr\bin\bash.exe'
-        if (-not (Test-Path -LiteralPath $stagedBash -PathType Leaf)) {
-            throw 'PortableGit extraction completed, but usr\bin\bash.exe was not found.'
-        }
+
         $gitVersion = (& $stagedGitExe --version 2>&1 | Out-String).Trim()
         if ($LASTEXITCODE -ne 0 -or $gitVersion -notmatch '\.windows\.\d+$') {
-            throw "PortableGit Git version probe failed: $gitVersion"
-        }
-        $bashVersion = (& $stagedBash --version 2>&1 | Select-Object -First 1 | Out-String).Trim()
-        if ($LASTEXITCODE -ne 0 -or $bashVersion -notmatch '^GNU bash,? version ') {
-            throw "PortableGit Bash version probe failed: $bashVersion"
+            throw "MinGit Git version probe failed: $gitVersion"
         }
         $sshVersion = (& $stagedSsh -V 2>&1 | Out-String).Trim()
         if ($LASTEXITCODE -ne 0 -or $sshVersion -notmatch 'OpenSSH') {
-            throw "PortableGit OpenSSH client probe failed: $sshVersion"
+            throw "MinGit OpenSSH client probe failed: $sshVersion"
         }
-        Write-DependencyLog "$gitVersion; $bashVersion; $sshVersion verified." 'OK'
+        Write-DependencyLog "$gitVersion; $sshVersion verified." 'OK'
 
+        $sshRelativePath = [System.IO.Path]::GetRelativePath($stagingRoot, $stagedSsh)
         $meta = [ordered]@{
-            Name = 'PortableGit'
+            Name = 'MinGit'
             Version = $release.tag_name
             Source = $asset.browser_download_url
-            SHA256 = $portableGitHash
+            SHA256 = $minGitHash
+            SshRelativePath = $sshRelativePath
             ManagedBy = 'ARGONOV SHELL installer'
             InstalledAt = (Get-Date).ToString('o')
         }
@@ -302,15 +269,32 @@ function Install-ArgonovGit {
     }
 
     if (-not (Test-Path -LiteralPath $managedGitExe -PathType Leaf)) {
-        throw 'PortableGit was not installed correctly.'
+        throw 'MinGit was not installed correctly.'
     }
     Add-UserPathEntry -Path (Join-Path $managedGit 'cmd')
     $version = (& $managedGitExe --version 2>$null | Out-String).Trim()
     if ($LASTEXITCODE -ne 0 -or $version -notmatch '^git version ') {
-        throw 'PortableGit verification failed after extraction.'
+        throw 'MinGit verification failed after extraction.'
     }
-    $script:Results.Git = [ordered]@{ Status = 'Installed'; Version = $version; Path = $managedGitExe; Flavor = 'PortableGit' }
-    Write-DependencyLog "$version (PortableGit) and OpenSSH client verified." 'OK'
+
+    $managedSshCandidates = @(
+        (Join-Path $managedGit 'usr\bin\ssh.exe'),
+        (Join-Path $managedGit 'mingw64\bin\ssh.exe'),
+        (Join-Path $managedGit 'ucrt64\bin\ssh.exe')
+    )
+    $managedSsh = $managedSshCandidates | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1
+    if (-not $managedSsh) {
+        throw 'MinGit OpenSSH client is missing after installation.'
+    }
+
+    $script:Results.Git = [ordered]@{
+        Status = 'Installed'
+        Version = $version
+        Path = $managedGitExe
+        SshPath = $managedSsh
+        Flavor = 'MinGit'
+    }
+    Write-DependencyLog "$version (MinGit) and bundled OpenSSH client verified." 'OK'
 }
 
 function Get-Python314 {
