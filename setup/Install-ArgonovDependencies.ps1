@@ -236,7 +236,7 @@ function Install-ArgonovPython {
     }
 
     Write-DependencyLog 'Installing the QR-code package and Pillow image backend...'
-    & $pythonExe -m pip install --disable-pip-version-check --upgrade 'qrcode[pil]'
+    & $pythonExe -m pip install --user --disable-pip-version-check --upgrade 'qrcode[pil]'
     if ($LASTEXITCODE -ne 0) { throw 'pip could not install qrcode[pil].' }
     & $pythonExe -c 'import qrcode; from PIL import Image'
     if ($LASTEXITCODE -ne 0) { throw 'Python QR dependencies failed their import test.' }
