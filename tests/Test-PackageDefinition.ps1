@@ -56,9 +56,11 @@ Assert-PackageTest ($start.Contains('. $argonovProfile')) 'Launcher loads ARGONO
 Assert-PackageTest ($iss.Contains('DestDir: "{localappdata}\Programs\ARGONOV-Dependencies\PowerShell"')) 'PowerShell runtime is installed in shared dependency storage.'
 Assert-PackageTest ($iss.Contains('DestDir: "{localappdata}\Programs\ARGONOV-Dependencies\dotnet"')) '.NET runtime is installed in shared dependency storage.'
 Assert-PackageTest ($iss.Contains('uninsneveruninstall')) 'Shared runtime files survive ARGONOV uninstallation.'
-Assert-PackageTest ($cmd.Contains('ARGONOV-Dependencies\PowerShell\pwsh.exe')) 'Shell launcher starts the persistent shared PowerShell runtime.'
-Assert-PackageTest ($dependencyCmd.Contains('ARGONOV-Dependencies\PowerShell\pwsh.exe')) 'Dependency setup is executed using the persistent shared PowerShell runtime.'
+Assert-PackageTest ($cmd.Contains('ARGONOV_PWSH=%ARGONOV_DEPENDENCY_ROOT%\PowerShell\pwsh.exe')) 'Shell launcher resolves and starts the persistent shared PowerShell runtime.'
+Assert-PackageTest ($dependencyCmd.Contains('ARGONOV_PWSH=%ARGONOV_DEPENDENCY_ROOT%\PowerShell\pwsh.exe')) 'Dependency setup resolves the persistent shared PowerShell runtime.'
 Assert-PackageTest ($iss.Contains('Repair-ArgonovDependencies.cmd')) 'Start menu includes an automatic dependency repair option.'
 Assert-PackageTest ($repairCmd.Contains('-InstallGit -InstallPython -InstallTerminal -InstallSensors')) 'Repair command retries all selected prerequisite installations.'
 Assert-PackageTest ($dependencyScript.Contains("Add-UserPathEntry -Path `$sharedPowerShell")) 'Shared PowerShell is added to current-user PATH.'
+Assert-PackageTest ($cmd.Contains('DOTNET_ROOT=%ARGONOV_DEPENDENCY_ROOT%\dotnet')) 'Shell launcher resolves the shared .NET runtime.'
+Assert-PackageTest ($cmd.Contains('Git\usr\bin')) 'Shell launcher exposes the bundled Git OpenSSH client.'
 Write-Host 'PACKAGE DEFINITION TESTS PASSED' -ForegroundColor Green
