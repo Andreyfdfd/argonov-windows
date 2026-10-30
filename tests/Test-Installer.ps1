@@ -39,6 +39,7 @@ $profilePath = Join-Path $sandbox 'PowerShell\Microsoft.PowerShell_profile.ps1'
 New-Item -ItemType Directory -Path (Split-Path -Parent $profilePath) -Force | Out-Null
 $initialProfile = '# User profile content' + [Environment]::NewLine + "Write-Output 'KEEP_THIS_LINE'" + [Environment]::NewLine
 [System.IO.File]::WriteAllText($profilePath, $initialProfile, [System.Text.UTF8Encoding]::new($false))
+$executionPolicyBefore = Get-ExecutionPolicy -Scope CurrentUser
 try {
     & $installer -InstallRoot $installRoot -ProfilePath $profilePath
     Assert-Test (Test-Path -LiteralPath (Join-Path $installRoot 'profile.ps1') -PathType Leaf) 'Installer copied profile.ps1.'
@@ -48,7 +49,14 @@ try {
     Assert-Test ($profileAfterInstall.Contains('KEEP_THIS_LINE')) 'Existing user profile content was preserved.'
     Assert-Test (($profileAfterInstall -split [regex]::Escape('# >>> ARGONOV SHELL (managed by installer) >>>')).Count -eq 2) 'One managed ARGONOV profile block was added.'
 
+    $customMusicFile = Join-Path $installRoot 'music\custom-test-track.txt'
+    New-Item -ItemType Directory -Path (Split-Path -Parent $customMusicFile) -Force | Out-Null
+    [System.IO.File]::WriteAllText($customMusicFile, 'KEEP_CUSTOM_DATA')
+
     & $installer -InstallRoot $installRoot -ProfilePath $profilePath
+    Assert-Test ((Get-Content -LiteralPath (Join-Path $installRoot 'music\custom-test-track.txt') -Raw) -eq 'KEEP_CUSTOM_DATA') 'User-managed music data survived the repair install.'
+    $executionPolicyAfter = Get-ExecutionPolicy -Scope CurrentUser
+    Assert-Test ($executionPolicyAfter -eq $executionPolicyBefore) 'Installer did not change the current-user ExecutionPolicy.'
     $profileAfterSecondInstall = [System.IO.File]::ReadAllText($profilePath)
     Assert-Test (($profileAfterSecondInstall -split [regex]::Escape('# >>> ARGONOV SHELL (managed by installer) >>>')).Count -eq 2) 'Second install did not duplicate the profile block.'
     Assert-Test ((Get-ChildItem -LiteralPath $sandbox -Directory -Filter 'Installed Shell.backup-*').Count -eq 1) 'Previous installation was backed up before replacement.'
