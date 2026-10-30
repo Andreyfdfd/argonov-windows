@@ -36,7 +36,7 @@
 
 ## Overview / Обзор
 
-**EN:** ARGONOV SHELL is a personal shell environment for Windows 11 built on top of **PowerShell 7**. It transforms the default terminal into a comprehensive toolbox for development, automation, AI assistance, OSINT research, and engineering tasks. The shell loads automatically when you open Windows Terminal.
+**EN:** ARGONOV SHELL is a personal shell environment for Windows built on top of **PowerShell 7**. It transforms a terminal session into a toolbox for development, automation, AI assistance, OSINT research, and engineering tasks. The ARGONOV Start menu shortcut opens it in a new Windows Terminal tab, or in the shared PowerShell console when Windows Terminal is unavailable.
 
 **RU:** ARGONOV SHELL — персональная оболочка для Windows 11, построенная поверх **PowerShell 7**. Превращает стандартный терминал в полноценный инструментарий для разработки, автоматизации, AI-ассистента, OSINT-исследований и инженерных задач. Оболочка загружается автоматически при открытии Windows Terminal.
 
@@ -48,7 +48,7 @@
 
 | Feature / Возможность | Description / Описание |
 |---|---|
-| **⚡ Auto-loading** / Автозагрузка | Loads profile on every terminal start / Профиль подхватывается при каждом старте |
+| **⚡ Dedicated launch** / Быстрый запуск | Start menu shortcut opens ARGONOV in Windows Terminal / Ярлык запускает ARGONOV в Windows Terminal |
 | **🎨 Custom prompt** / Кастомный промпт | Two-line prompt with path, git branch, time / Двухстрочный промпт: путь, git-ветка, время |
 | **📦 96 commands** / 96 команд | Aliases, functions, utilities / Алиасы, функции, утилиты |
 | **🤖 AI agent** / AI-агент | Local LLM (LM Studio) / Локальная LLM (LM Studio) |
@@ -129,9 +129,9 @@ The project installer validates PowerShell syntax, copies the shell to the per-u
 
 ## Quick Start / Быстрый старт
 
-**EN:** Open Windows Terminal and try:
+**EN:** Launch ARGONOV SHELL from the Start menu, then try:
 
-**RU:** Открой Windows Terminal и попробуй:
+**RU:** Запусти ARGONOV SHELL через меню «Пуск», затем попробуй:
 
 ```powershell
 sysinfo           # Full system health diagnostics / Полная диагностика состояния ПК
