@@ -156,6 +156,12 @@ jobs:
           }
           New-Item -ItemType Directory -Path $programsRoot -Force | Out-Null
           Set-Content -LiteralPath $legacyShortcut -Value 'ARGONOV_PRODUCTION_SHORTCUT_MUST_SURVIVE'
+          $userEnvironmentKey = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey('Environment', $false)
+          try {
+            $userPathBefore = [string]$userEnvironmentKey.GetValue('Path', '', [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames)
+          } finally {
+            if ($userEnvironmentKey) { $userEnvironmentKey.Dispose() }
+          }
           $env:ARGONOV_INSTALLER_TEST = '1'
           $env:ARGONOV_DEPENDENCY_ROOT = $dependenciesRoot
           $env:ARGONOV_SYSINFO_LHM_DIR = $sensorRoot
@@ -166,6 +172,15 @@ jobs:
           if (-not (Test-Path -LiteralPath $testShortcut -PathType Leaf)) { throw 'Test-specific Start menu shortcut was not created.' }
           if ((Get-Content -LiteralPath $legacyShortcut -Raw).Trim() -ne 'ARGONOV_PRODUCTION_SHORTCUT_MUST_SURVIVE') {
             throw 'Test installation changed the protected production shortcut.'
+          }
+          $userEnvironmentKey = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey('Environment', $false)
+          try {
+            $userPathAfterInstall = [string]$userEnvironmentKey.GetValue('Path', '', [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames)
+          } finally {
+            if ($userEnvironmentKey) { $userEnvironmentKey.Dispose() }
+          }
+          if ($userPathAfterInstall -cne $userPathBefore) {
+            throw 'Test installation modified the persistent current-user PATH.'
           }
           $sshExe = Join-Path $env:WINDIR 'System32\OpenSSH\ssh.exe'
           $sshExistedBefore = Test-Path -LiteralPath $sshExe
@@ -239,7 +254,16 @@ jobs:
           if ((Get-Content -LiteralPath $productionSentinel -Raw).Trim() -ne 'ARGONOV_PRODUCTION_INSTALL_MUST_SURVIVE') {
             throw 'Uninstall modified the protected production installation sentinel.'
           }
-          Write-Host 'ARGONOV launcher, profile and modules were removed; production shortcut and separate production-install sentinel survived.' -ForegroundColor Green
+          $userEnvironmentKey = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey('Environment', $false)
+          try {
+            $userPathAfterUninstall = [string]$userEnvironmentKey.GetValue('Path', '', [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames)
+          } finally {
+            if ($userEnvironmentKey) { $userEnvironmentKey.Dispose() }
+          }
+          if ($userPathAfterUninstall -cne $userPathBefore) {
+            throw 'Test uninstall modified the persistent current-user PATH.'
+          }
+          Write-Host 'ARGONOV files were removed; production sentinels, user PATH, shared dependencies and user data were preserved.' -ForegroundColor Green
           if (-not (Test-Path -LiteralPath $keepFile -PathType Leaf)) { throw 'User data was removed by uninstaller.' }
           if (-not (Test-Path -LiteralPath $pwsh -PathType Leaf)) { throw 'Shared PowerShell runtime was removed during shell uninstall.' }
           if (-not (Test-Path -LiteralPath (Join-Path $env:DOTNET_ROOT 'host\fxr') -PathType Container)) { throw 'Shared .NET runtime was removed during shell uninstall.' }
