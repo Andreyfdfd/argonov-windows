@@ -78,5 +78,7 @@ Assert-PackageTest ($iss.Contains('Repair-ArgonovDependencies.cmd')) 'Start menu
 Assert-PackageTest ($repairCmd.Contains('-InstallGit -InstallPython -InstallTerminal -InstallSensors')) 'Repair command retries all selected prerequisite installations.'
 Assert-PackageTest ($dependencyScript.Contains("Add-UserPathEntry -Path `$sharedPowerShell")) 'Shared PowerShell is added to current-user PATH.'
 Assert-PackageTest ($cmd.Contains('DOTNET_ROOT=%ARGONOV_DEPENDENCY_ROOT%\dotnet')) 'Shell launcher resolves the shared .NET runtime.'
-Assert-PackageTest ($cmd.Contains('Git\usr\bin')) 'Shell launcher exposes the bundled Git OpenSSH client.'
+Assert-PackageTest ($cmd.Contains('GIT_SSH=%ARGONOV_DEPENDENCY_ROOT%\Git\usr\bin\ssh.exe')) 'Shell launcher points Git to the bundled OpenSSH client without adding all Unix tools to PATH.'
+Assert-PackageTest (-not $cmd.Contains('Git\usr\bin;%PATH%')) 'PortableGit usr\bin does not shadow native Windows commands in PATH.'
+Assert-PackageTest ($dependencyScript.Contains("Join-Path `$stagingRoot 'etc\post-install'")) 'PortableGit final post-install cleanup is verified before accepting the installation.'
 Write-Host 'PACKAGE DEFINITION TESTS PASSED' -ForegroundColor Green
