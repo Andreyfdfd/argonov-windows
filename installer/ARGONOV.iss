@@ -41,7 +41,6 @@ Name: "installGit"; Description: "Установить Git for Windows (если
 Name: "installPython"; Description: "Установить Python 3.14 и пакет QR-кодов qrcode + Pillow"; GroupDescription: "Компоненты и зависимости:"; Flags: checkedonce
 Name: "installTerminal"; Description: "Установить Windows Terminal (если отсутствует)"; GroupDescription: "Компоненты и зависимости:"; Flags: checkedonce
 Name: "installSensors"; Description: "Установить LibreHardwareMonitor для датчиков SYSINFO"; GroupDescription: "Компоненты и зависимости:"; Flags: checkedonce
-Name: "terminalDefault"; Description: "Сделать ARGONOV SHELL профилем по умолчанию в Windows Terminal"; GroupDescription: "Настройка Windows Terminal:"; Flags: checkedonce
 
 [Dirs]
 Name: "{app}\music"; Flags: uninsneveruninstall
@@ -83,7 +82,6 @@ begin
     if WizardIsTaskSelected('installPython') then Params := Params + ' -InstallPython';
     if WizardIsTaskSelected('installTerminal') then Params := Params + ' -InstallTerminal';
     if WizardIsTaskSelected('installSensors') then Params := Params + ' -InstallSensors';
-    if WizardIsTaskSelected('terminalDefault') then Params := Params + ' -SetTerminalDefault';
 
     if Params <> '' then
     begin
