@@ -11,6 +11,7 @@ $dependencyCmdPath = Join-Path $projectRoot 'Install-ArgonovDependencies.cmd'
 $repairCmdPath = Join-Path $projectRoot 'Repair-ArgonovDependencies.cmd'
 $dependencyScriptPath = Join-Path $projectRoot 'setup\Install-ArgonovDependencies.ps1'
 $osintPath = Join-Path $projectRoot 'modules\osint\hacktool.ps1'
+$sysinfoPath = Join-Path $projectRoot 'modules\system\sysinfo.ps1'
 $iss = [System.IO.File]::ReadAllText($issPath)
 $start = [System.IO.File]::ReadAllText($startPath)
 $cmd = [System.IO.File]::ReadAllText($cmdPath)
@@ -19,6 +20,7 @@ $dependencyCmd = [System.IO.File]::ReadAllText($dependencyCmdPath)
 $repairCmd = [System.IO.File]::ReadAllText($repairCmdPath)
 $dependencyScript = [System.IO.File]::ReadAllText($dependencyScriptPath)
 $osintScript = [System.IO.File]::ReadAllText($osintPath)
+$sysinfoScript = [System.IO.File]::ReadAllText($sysinfoPath)
 function Assert-PackageTest {
     param([bool]$Condition, [string]$Message)
     if (-not $Condition) { throw "PACKAGE TEST FAILED: $Message" }
@@ -60,6 +62,8 @@ Assert-PackageTest ($dependencyScript.Contains('PythonPackages')) 'Python packag
 Assert-PackageTest ($dependencyScript.Contains('--target $pythonPackagesRoot')) 'pip installs into the managed packages folder instead of the user Python site.'
 Assert-PackageTest ($dependencyScript.Contains('ARGONOV_SYSINFO_LHM_DIR')) 'SYSINFO sensor backend supports an isolated dependency root.'
 Assert-PackageTest ($dependencyScript.Contains('LibreHardwareMonitor')) 'SYSINFO sensor backend is installed automatically.'
+Assert-PackageTest ($sysinfoScript.Contains('Initialize-ArgonovSysInfoLhmAssembly')) 'SYSINFO validates the installed .NET sensor assembly.'
+Assert-PackageTest (-not $sysinfoScript.Contains("Проверяю доступность датчиков...")) 'Sensor installation does not perform hardware enumeration during setup.'
 Assert-PackageTest ($dependencyScript.Contains('Get-AppxPackage -Name Microsoft.WindowsTerminal')) 'Existing Microsoft Store Windows Terminal is detected and reused.'
 Assert-PackageTest ($dependencyScript.Contains('WindowsTerminal.exe')) 'Portable Windows Terminal is downloaded and verified when required.'
 Assert-PackageTest ($dependencyScript.Contains('[System.Diagnostics.FileVersionInfo]::GetVersionInfo($terminalExe).FileVersion')) 'Terminal version is read from file metadata without starting the GUI.'
