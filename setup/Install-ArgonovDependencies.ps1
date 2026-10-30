@@ -220,7 +220,7 @@ function Install-ArgonovGit {
         $process = [System.Diagnostics.Process]::Start($startInfo)
         if (-not $process) { throw 'Could not start the PortableGit self-extracting archive.' }
         $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
-        $nextHeartbeat = 30
+        $nextHeartbeat = 60
         try {
             while (-not $process.WaitForExit(5000)) {
                 if ($stopwatch.Elapsed.TotalSeconds -ge 600) {
@@ -228,17 +228,9 @@ function Install-ArgonovGit {
                     throw 'PortableGit extraction exceeded the 10-minute safety timeout.'
                 }
                 if ($stopwatch.Elapsed.TotalSeconds -ge $nextHeartbeat) {
-                    $totalBytes = 0L
-                    $fileCount = 0
-                    if (Test-Path -LiteralPath $stagingRoot -PathType Container) {
-                        foreach ($file in Get-ChildItem -LiteralPath $stagingRoot -File -Recurse -ErrorAction SilentlyContinue) {
-                            $totalBytes += $file.Length
-                            $fileCount++
-                        }
-                    }
-                    $sizeMb = [math]::Round($totalBytes / 1MB, 1)
-                    Write-DependencyLog "PortableGit extraction is running: $fileCount files, $sizeMb MB staged."
-                    $nextHeartbeat += 30
+                    $elapsed = [math]::Round($stopwatch.Elapsed.TotalSeconds)
+                    Write-DependencyLog "PortableGit extraction is still running after $elapsed seconds."
+                    $nextHeartbeat += 60
                 }
             }
             $code = $process.ExitCode
