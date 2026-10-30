@@ -133,6 +133,13 @@ jobs:
           $setup = (Resolve-Path 'dist\ARGONOV-SHELL-Setup-x64.exe').Path
           $runId = [guid]::NewGuid().ToString('N')
           $target = Join-Path $env:RUNNER_TEMP ("ARGONOV-SMOKE-INSTALL-" + $runId)
+          $productionRoot = Join-Path $env:RUNNER_TEMP ("ARGONOV-PRODUCTION-PRESERVE-" + $runId)
+          $productionSentinel = Join-Path $productionRoot 'Start-Argonov.ps1'
+          if (Test-Path -LiteralPath $productionRoot) {
+            throw "Refusing to overwrite a pre-existing production sentinel directory: $productionRoot"
+          }
+          New-Item -ItemType Directory -Path $productionRoot -Force | Out-Null
+          Set-Content -LiteralPath $productionSentinel -Value 'ARGONOV_PRODUCTION_INSTALL_MUST_SURVIVE'
           $dependenciesRoot = Join-Path $env:LOCALAPPDATA 'Programs\ARGONOV-Dependencies'
           $sensorRoot = Join-Path $env:RUNNER_TEMP ("ARGONOV-SMOKE-SENSORS-" + $runId)
           if (Test-Path -LiteralPath $dependenciesRoot) {
@@ -226,7 +233,13 @@ jobs:
           if ((Get-Content -LiteralPath $legacyShortcut -Raw).Trim() -ne 'ARGONOV_PRODUCTION_SHORTCUT_MUST_SURVIVE') {
             throw 'Uninstall changed the protected production shortcut.'
           }
-          Write-Host 'ARGONOV launcher, profile and modules were removed by the uninstaller; production shortcut survived.' -ForegroundColor Green
+          if (-not (Test-Path -LiteralPath $productionSentinel -PathType Leaf)) {
+            throw 'Uninstall removed the protected production installation sentinel.'
+          }
+          if ((Get-Content -LiteralPath $productionSentinel -Raw).Trim() -ne 'ARGONOV_PRODUCTION_INSTALL_MUST_SURVIVE') {
+            throw 'Uninstall modified the protected production installation sentinel.'
+          }
+          Write-Host 'ARGONOV launcher, profile and modules were removed; production shortcut and separate production-install sentinel survived.' -ForegroundColor Green
           if (-not (Test-Path -LiteralPath $keepFile -PathType Leaf)) { throw 'User data was removed by uninstaller.' }
           if (-not (Test-Path -LiteralPath $pwsh -PathType Leaf)) { throw 'Shared PowerShell runtime was removed during shell uninstall.' }
           if (-not (Test-Path -LiteralPath (Join-Path $env:DOTNET_ROOT 'host\fxr') -PathType Container)) { throw 'Shared .NET runtime was removed during shell uninstall.' }
@@ -240,6 +253,7 @@ jobs:
           Remove-Item -LiteralPath $target -Recurse -Force -ErrorAction SilentlyContinue
           Remove-Item -LiteralPath $dependenciesRoot -Recurse -Force -ErrorAction SilentlyContinue
           Remove-Item -LiteralPath $legacyShortcut -Force -ErrorAction SilentlyContinue
+          Remove-Item -LiteralPath $productionRoot -Recurse -Force -ErrorAction SilentlyContinue
           Remove-Item Env:ARGONOV_SYSINFO_LHM_DIR -ErrorAction SilentlyContinue
           Remove-Item Env:PYTHONPATH -ErrorAction SilentlyContinue
           Remove-Item -LiteralPath $sensorRoot -Recurse -Force -ErrorAction SilentlyContinue
