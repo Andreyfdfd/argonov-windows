@@ -36,7 +36,12 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "russian"; MessagesFile: "compiler:Languages\Russian.isl"
 
 [Tasks]
-Name: "desktopicon"; Description: "Создать ярлык на рабочем столе"; GroupDescription: "Дополнительные параметры:"; Flags: unchecked
+Name: "desktopicon"; Description: "Создать ярлык на рабочем столе"; GroupDescription: "Ярлыки:"; Flags: unchecked
+Name: "installGit"; Description: "Установить Git for Windows (если отсутствует)"; GroupDescription: "Компоненты и зависимости:"; Flags: checkedonce
+Name: "installPython"; Description: "Установить Python 3.14 и пакет QR-кодов qrcode + Pillow"; GroupDescription: "Компоненты и зависимости:"; Flags: checkedonce
+Name: "installTerminal"; Description: "Установить Windows Terminal (если отсутствует)"; GroupDescription: "Компоненты и зависимости:"; Flags: checkedonce
+Name: "installSensors"; Description: "Установить LibreHardwareMonitor для датчиков SYSINFO"; GroupDescription: "Компоненты и зависимости:"; Flags: checkedonce
+Name: "terminalDefault"; Description: "Сделать ARGONOV SHELL профилем по умолчанию в Windows Terminal"; GroupDescription: "Настройка Windows Terminal:"; Flags: checkedonce
 
 [Dirs]
 Name: "{app}\music"; Flags: uninsneveruninstall
@@ -48,6 +53,9 @@ Name: "{app}\config"; Flags: uninsneveruninstall
 Source: "..\payload\powershell\*"; DestDir: "{app}\runtime"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\payload\dotnet\*"; DestDir: "{app}\dotnet"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\Start-Argonov.cmd"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\Launch-Argonov.cmd"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\Install-ArgonovDependencies.cmd"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\setup\*"; DestDir: "{app}\setup"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\modules\*"; DestDir: "{app}\modules"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\profile.ps1"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\Start-Argonov.ps1"; DestDir: "{app}"; Flags: ignoreversion
@@ -55,8 +63,35 @@ Source: "..\README.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\docs\*"; DestDir: "{app}\docs"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{autoprograms}\ARGONOV SHELL"; Filename: "{app}\Start-Argonov.cmd"; WorkingDir: "{app}"
-Name: "{autodesktop}\ARGONOV SHELL"; Filename: "{app}\Start-Argonov.cmd"; WorkingDir: "{app}"; Tasks: desktopicon
+Name: "{autoprograms}\ARGONOV SHELL"; Filename: "{app}\Launch-Argonov.cmd"; WorkingDir: "{app}"
+Name: "{autodesktop}\ARGONOV SHELL"; Filename: "{app}\Launch-Argonov.cmd"; WorkingDir: "{app}"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\Start-Argonov.cmd"; Description: "Запустить ARGONOV SHELL"; Flags: postinstall nowait skipifsilent
+Filename: "{app}\Launch-Argonov.cmd"; Description: "Запустить ARGONOV SHELL"; Flags: postinstall nowait skipifsilent
+
+[Code]
+procedure CurStepChanged(CurStep: TSetupStep);
+var
+  Params: string;
+  CommandLine: string;
+  ResultCode: Integer;
+begin
+  if CurStep = ssPostInstall then
+  begin
+    Params := '';
+    if WizardIsTaskSelected('installGit') then Params := Params + ' -InstallGit';
+    if WizardIsTaskSelected('installPython') then Params := Params + ' -InstallPython';
+    if WizardIsTaskSelected('installTerminal') then Params := Params + ' -InstallTerminal';
+    if WizardIsTaskSelected('installSensors') then Params := Params + ' -InstallSensors';
+    if WizardIsTaskSelected('terminalDefault') then Params := Params + ' -SetTerminalDefault';
+
+    if Params <> '' then
+    begin
+      CommandLine := '/D /S /C ""' + ExpandConstant('{app}\Install-ArgonovDependencies.cmd') + '"' + Params + '"';
+      if not Exec(ExpandConstant('{sys}\cmd.exe'), CommandLine, ExpandConstant('{app}'), SW_SHOW, ewWaitUntilTerminated, ResultCode) then
+        MsgBox('ARGONOV установлен, но запуск установщика дополнительных компонентов не удался. Проверьте файл dependency-install.log в %LOCALAPPDATA%\ARGONOV\installer.', mbError, MB_OK)
+      else if ResultCode <> 0 then
+        MsgBox('ARGONOV установлен, но один или несколько компонентов не удалось установить. Подробности находятся в %LOCALAPPDATA%\ARGONOV\installer\dependency-install.log. Оболочку можно запустить и повторить настройку позже.', mbError, MB_OK);
+    end;
+  end;
+end;
