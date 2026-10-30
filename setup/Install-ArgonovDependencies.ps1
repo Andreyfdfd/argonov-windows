@@ -383,11 +383,19 @@ function Install-ArgonovPython {
         throw "Python verification failed: $version"
     }
 
-    Write-DependencyLog 'Installing the QR-code package and Pillow image backend...'
-    & $pythonExe -m pip install --user --disable-pip-version-check --upgrade 'qrcode[pil]'
-    if ($LASTEXITCODE -ne 0) { throw 'pip could not install qrcode[pil].' }
-    & $pythonExe -c 'import qrcode; from PIL import Image'
-    if ($LASTEXITCODE -ne 0) { throw 'Python QR dependencies failed their import test.' }
+    $pythonPackagesRoot = Join-Path $DependencyRoot 'PythonPackages'
+    New-Item -ItemType Directory -Path $pythonPackagesRoot -Force | Out-Null
+    $previousPythonPath = $env:PYTHONPATH
+    try {
+        $env:PYTHONPATH = if ($previousPythonPath) { "$pythonPackagesRoot;$previousPythonPath" } else { $pythonPackagesRoot }
+        Write-DependencyLog "Installing qrcode and Pillow into the shared dependency directory: $pythonPackagesRoot"
+        & $pythonExe -m pip install --disable-pip-version-check --upgrade --target $pythonPackagesRoot 'qrcode[pil]'
+        if ($LASTEXITCODE -ne 0) { throw 'pip could not install qrcode[pil] into the managed dependency directory.' }
+        & $pythonExe -c 'import qrcode; from PIL import Image'
+        if ($LASTEXITCODE -ne 0) { throw 'Python QR dependencies failed their import test.' }
+    } finally {
+        $env:PYTHONPATH = $previousPythonPath
+    }
 
     $script:Results.Python = [ordered]@{
         Status = 'Ready'
@@ -548,6 +556,12 @@ function Install-ArgonovTerminal {
 
 function Install-ArgonovSensors {
     $modulePath = Join-Path $InstallRoot 'modules\system\sysinfo.ps1'
+    $sensorRoot = if (-not [string]::IsNullOrWhiteSpace($env:ARGONOV_SYSINFO_LHM_DIR)) {
+        [System.IO.Path]::GetFullPath($env:ARGONOV_SYSINFO_LHM_DIR)
+    } else {
+        Join-Path $env:LOCALAPPDATA 'ARGONOV\tools\LibreHardwareMonitor'
+    }
+    $env:ARGONOV_SYSINFO_LHM_DIR = $sensorRoot
     if (-not (Test-Path -LiteralPath $modulePath -PathType Leaf)) {
         throw "SYSINFO module not found: $modulePath"
     }
@@ -559,7 +573,7 @@ function Install-ArgonovSensors {
     }
 
     Install-ArgonovSysInfoSensorBackend
-    $library = Join-Path $env:LOCALAPPDATA 'ARGONOV\tools\LibreHardwareMonitor\LibreHardwareMonitorLib.dll'
+    $library = Join-Path $sensorRoot 'LibreHardwareMonitorLib.dll'
     if (-not (Test-Path -LiteralPath $library -PathType Leaf)) {
         throw 'LibreHardwareMonitor backend was not installed. See dependency-install.log for details.'
     }
